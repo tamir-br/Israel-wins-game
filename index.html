@@ -14,7 +14,7 @@
     align-items: center;
     justify-content: center;
     width: 100vw;
-    height: 100vh;
+    height: 100dvh; /* dynamic — excludes browser chrome on mobile */
     overflow: hidden;
     font-family: 'Segoe UI', Arial, sans-serif;
   }
@@ -98,12 +98,12 @@ const L = isHebrew ? {
   sendLove:     '💕 שגר אהבה!',
   iranSub:      '(איראן)',
   howToPlay:    'איך לשחק',
-  moveLine:     'טאפ ↑ ↓  —  הזז והתחמק',
-  shootLine:    'טאפ 💕  —  שגר אהבה לעם איראן',
+  moveLine:     'גרור את האצבע — לשלוט בגובה הדגל',
+  shootLine:    'לחץ בכל מקום — לשגר אהבה לעם איראן',
   sendThese:    'שגר אלה:',
   dodgeThese:   'התחמק מאלה:',
   goal:         '!מלא את סרגל ❤️ ל-1000 והבא שלום',
-  startBtn:     '▶ טאפ להתחיל',
+  startBtn:     '▶ לחץ להתחיל',
   upBtn:        '↑',
   shootBtn:     '💕 שגר',
   downBtn:      '↓',
@@ -126,12 +126,12 @@ const L = isHebrew ? {
   sendLove:     '💕 SEND LOVE!',
   iranSub:      '(IRAN)',
   howToPlay:    'HOW TO PLAY',
-  moveLine:     'Tap ↑ ↓  —  Move and dodge',
-  shootLine:    'Tap 💕  —  Send love to the people of Iran',
+  moveLine:     'Drag your finger — to steer the flag up & down',
+  shootLine:    'Tap anywhere — to send love to the people of Iran',
   sendThese:    'SEND THESE:',
   dodgeThese:   'DODGE THESE:',
   goal:         'Fill the ❤️ bar to 1000 and bring SHALOM!',
-  startBtn:     '▶ TAP TO START',
+  startBtn:     '▶ TAP TO START / TOUCH',
   upBtn:        '↑',
   shootBtn:     '💕 SHOOT',
   downBtn:      '↓',
@@ -250,11 +250,18 @@ function _drawStar(ctx, cx, cy, r, color) {
 function drawIsraelFlag(ctx, cx, cy, size) {
   const w = size * 1.5, h = size;
   const x = cx - w / 2, y = cy - h / 2;
-  ctx.fillStyle = '#fff';     ctx.fillRect(x, y, w, h);
+  // White background
+  ctx.fillStyle = '#fff'; ctx.fillRect(x, y, w, h);
+  // Blue stripes
   ctx.fillStyle = '#0038b8';
   ctx.fillRect(x, y + h * 0.20, w, h * 0.18);
   ctx.fillRect(x, y + h * 0.62, w, h * 0.18);
-  _drawStar(ctx, cx, cy, size * 0.22, '#0038b8');
+  // Star of David — larger so it's visible at small sizes
+  _drawStar(ctx, cx, cy, size * 0.28, '#0038b8');
+  // Thin border so it doesn't disappear on dark backgrounds
+  ctx.strokeStyle = '#aac0e0';
+  ctx.lineWidth = Math.max(0.5, size * 0.02);
+  ctx.strokeRect(x, y, w, h);
 }
 
 function drawIranFlag(ctx, cx, cy, size) {
@@ -263,6 +270,10 @@ function drawIranFlag(ctx, cx, cy, size) {
   ctx.fillStyle = '#239f40'; ctx.fillRect(x, y,             w, h / 3);
   ctx.fillStyle = '#fff';    ctx.fillRect(x, y + h / 3,     w, h / 3);
   ctx.fillStyle = '#da0000'; ctx.fillRect(x, y + h * 2 / 3, w, h / 3);
+  // Thin white sword/tulip hint in center stripe (simplified)
+  ctx.strokeStyle = '#c8a000';
+  ctx.lineWidth = Math.max(0.5, size * 0.02);
+  ctx.strokeRect(x, y, w, h);
 }
 
 // ─── Particle ─────────────────────────────────────────────────────────────────
@@ -863,6 +874,14 @@ class InputHandler {
       }
     }, { passive: false });
 
+    canvas.addEventListener('touchmove', e => {
+      e.preventDefault();
+      for (const t of e.changedTouches) {
+        const pt = this._toCanvas(t);
+        game.onTouchDrag(pt.x, pt.y);
+      }
+    }, { passive: false });
+
     canvas.addEventListener('touchend', e => {
       e.preventDefault();
       for (const t of e.changedTouches) {
@@ -940,6 +959,14 @@ class Game {
     if (this.state === 'WIN')   return;
     if (phase !== 'start') return;
 
+    // ── Tap anywhere in the play area → move player there + shoot ──────────
+    if (y >= C.PLAY_TOP && y <= C.PLAY_BOT) {
+      this.player.y = clamp(y, C.PLAY_TOP + this.player.h / 2, C.PLAY_BOT - this.player.h / 2);
+      this._playerShoot();
+      return;
+    }
+
+    // ── Bottom bar buttons (fallback for desktop / keyboard-less devices) ──
     const by = C.PLAY_BOT + 10, bh = 60;
     if (x >= 16  && x <= 216 && y >= by && y <= by + bh) {
       this.input.keys['ArrowUp'] = true;
@@ -950,6 +977,14 @@ class Game {
       setTimeout(() => { this.input.keys['ArrowDown'] = false; }, 200);
     }
     if (x >= 230 && x <= 585 && y >= by && y <= by + bh) this._playerShoot();
+  }
+
+  // Drag in play area → smoothly steer player (no shooting)
+  onTouchDrag(x, y) {
+    if (this.state !== 'PLAYING') return;
+    if (y >= C.PLAY_TOP && y <= C.PLAY_BOT) {
+      this.player.y = clamp(y, C.PLAY_TOP + this.player.h / 2, C.PLAY_BOT - this.player.h / 2);
+    }
   }
 
   onClick(x, y) {
@@ -966,6 +1001,10 @@ class Game {
     this._reset();
     this.state = 'PLAYING';
     this._lastTime = null;
+    // Try to go fullscreen on mobile — hides address bar
+    const el = document.documentElement;
+    const req = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen;
+    if (req) req.call(el).catch(() => {});
   }
 
   _reset() {
@@ -1067,6 +1106,8 @@ class Game {
 
   _draw() {
     const ctx = this.ctx;
+    // Prevent the RTL document direction from reversing canvas text ("1000/0" bug)
+    ctx.direction = 'ltr';
     const lp  = clamp(this.score / C.GOAL_SCORE, 0, 1);
 
     ctx.clearRect(0, 0, C.W, C.H);
@@ -1110,13 +1151,16 @@ class Game {
 // ─── Responsive scaling ───────────────────────────────────────────────────────
 const container = document.getElementById('container');
 function scaleCanvas() {
-  const scale = Math.min(window.innerWidth / C.W, window.innerHeight / C.H);
+  // Use visualViewport when available — it excludes the browser address bar
+  const vp = window.visualViewport || window;
+  const vw = vp.width  || window.innerWidth;
+  const vh = vp.height || window.innerHeight;
+  const scale = Math.min(vw / C.W, vh / C.H);
   container.style.transform = `scale(${scale})`;
-  if (window._game && window._game.input) {
-    window._game.input._scale = scale;
-  }
+  if (window._game && window._game.input) window._game.input._scale = scale;
 }
 window.addEventListener('resize', scaleCanvas);
+if (window.visualViewport) window.visualViewport.addEventListener('resize', scaleCanvas);
 
 // ─── Bootstrap ────────────────────────────────────────────────────────────────
 window.onload = () => {
