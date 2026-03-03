@@ -1,0 +1,1129 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>ישראל מנצחת - שאגת הארי</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bangers&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0a0a1a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    font-family: 'Segoe UI', Arial, sans-serif;
+  }
+  #container {
+    position: relative;
+    width: 900px;
+    height: 600px;
+    transform-origin: center center;
+  }
+  #gameCanvas {
+    display: block;
+    border-radius: 8px;
+    box-shadow: 0 0 40px rgba(0,150,255,0.3);
+  }
+  #portrait-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(10,10,26,0.96);
+    z-index: 9999;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    text-align: center;
+    padding: 20px;
+  }
+  #portrait-overlay .rotate-icon {
+    font-size: 80px;
+    margin-bottom: 24px;
+    display: block;
+    animation: tilt 2s ease-in-out infinite alternate;
+  }
+  #portrait-overlay p {
+    font-size: 22px;
+    color: #88ccff;
+    line-height: 1.6;
+  }
+  @keyframes tilt {
+    from { transform: rotate(-25deg); }
+    to   { transform: rotate(25deg);  }
+  }
+  @media (orientation: portrait) and (max-width: 768px) {
+    #portrait-overlay { display: flex; }
+  }
+</style>
+</head>
+<body>
+<div id="portrait-overlay">
+  <span class="rotate-icon">🔄</span>
+  <p id="rotate-msg">Rotate your phone<br>for the best experience!</p>
+</div>
+<div id="container">
+  <canvas id="gameCanvas" width="900" height="600"></canvas>
+</div>
+<script>
+'use strict';
+
+// ─── Language detection ───────────────────────────────────────────────────────
+const isHebrew = /^he\b/i.test(
+  (navigator.languages && navigator.languages[0]) || navigator.language || ''
+);
+
+if (isHebrew) {
+  document.documentElement.lang = 'he';
+  document.documentElement.dir  = 'rtl';
+  document.getElementById('rotate-msg').innerHTML = 'סובב את הטלפון<br>לחוויה הטובה ביותר!';
+} else {
+  document.documentElement.lang = 'en';
+  document.documentElement.dir  = 'ltr';
+  document.title = 'Israel Wins — Roar of the Lion';
+}
+
+const L = isHebrew ? {
+  title:        'ישראל מנצחת!',
+  subtitle:     'שגר אהבה לעם איראן — והבא שלום',
+  topTitle:     'ישראל מנצחת',
+  yourBase:     '🏠 הבסיס שלך',
+  israelSub:    '(ישראל)',
+  sendLove:     '💕 שגר אהבה!',
+  iranSub:      '(איראן)',
+  howToPlay:    'איך לשחק',
+  moveLine:     'טאפ ↑ ↓  —  הזז והתחמק',
+  shootLine:    'טאפ 💕  —  שגר אהבה לעם איראן',
+  sendThese:    'שגר אלה:',
+  dodgeThese:   'התחמק מאלה:',
+  goal:         '!מלא את סרגל ❤️ ל-1000 והבא שלום',
+  startBtn:     '▶ טאפ להתחיל',
+  upBtn:        '↑',
+  shootBtn:     '💕 שגר',
+  downBtn:      '↓',
+  battlefield:  '✈️  שדה הקרב  ✈️',
+  loveArrow:    'שגר אהבה  →→→',
+  lovePct:      p  => `💕 אהבה ${p}%`,
+  shalom:       '🕊️ שלום! SHALOM! 🕊️',
+  peaceBrought: t  => `הבאת שלום תוך ${t}!`,
+  scoreLine:    s  => `ניקוד: ${s.toLocaleString()} נק׳`,
+  alwaysWins:   'ישראל מנצחת תמיד!',
+  shareTitle:   '🦁 ישראל מנצחת - שאגת הארי',
+  sharePeace:   t  => `הבאתי שלום תוך ${t}!`,
+  shareScore:   s  => `ניקוד: ${s.toLocaleString()} נק׳`,
+} : {
+  title:        'Israel Wins!',
+  subtitle:     'Send love to the people of Iran — bring PEACE!',
+  topTitle:     'Israel Wins',
+  yourBase:     '🏠 YOUR BASE',
+  israelSub:    '(ISRAEL)',
+  sendLove:     '💕 SEND LOVE!',
+  iranSub:      '(IRAN)',
+  howToPlay:    'HOW TO PLAY',
+  moveLine:     'Tap ↑ ↓  —  Move and dodge',
+  shootLine:    'Tap 💕  —  Send love to the people of Iran',
+  sendThese:    'SEND THESE:',
+  dodgeThese:   'DODGE THESE:',
+  goal:         'Fill the ❤️ bar to 1000 and bring SHALOM!',
+  startBtn:     '▶ TAP TO START',
+  upBtn:        '↑',
+  shootBtn:     '💕 SHOOT',
+  downBtn:      '↓',
+  battlefield:  '✈️  BATTLEFIELD  ✈️',
+  loveArrow:    'SEND LOVE  →→→',
+  lovePct:      p  => `💕 LOVE ${p}%`,
+  shalom:       '🕊️ שלום! SHALOM! 🕊️',
+  peaceBrought: t  => `You brought peace in ${t}!`,
+  scoreLine:    s  => `Score: ${s.toLocaleString()} pts`,
+  alwaysWins:   'Israel always wins!',
+  shareTitle:   '🦁 Israel Wins — Roar of the Lion',
+  sharePeace:   t  => `I brought PEACE in ${t}!`,
+  shareScore:   s  => `Score: ${s.toLocaleString()} pts`,
+};
+
+// ─── Constants ───────────────────────────────────────────────────────────────
+const C = {
+  W: 900, H: 600,
+  TOP_BAR: 50, BOT_BAR: 80,
+  PLAY_TOP: 50, PLAY_BOT: 520,
+  GOAL_SCORE: 1000,
+  SCORE_HIT:  50,
+  SCORE_HURT: 30,
+  DIFFICULTY_INTERVAL: 10000,
+  ISRAEL_ZONE_X: 0, ISRAEL_ZONE_W: 300,
+  IRAN_ZONE_X: 600,  IRAN_ZONE_W: 300,
+  PLAYER_W: 70, PLAYER_H: 70,
+  PROJ_SIZE: 32,
+  ISRAEL_PROJS: ['💕','🌸','🦄','🐾','😊','🌈','⭐','🎀'],
+  IRAN_PROJS:   ['💩','😡','💣','🔴'],
+};
+
+// ─── Utilities ────────────────────────────────────────────────────────────────
+function rectsOverlap(a, b) {
+  return a.x < b.x + b.w && a.x + a.w > b.x &&
+         a.y < b.y + b.h && a.y + a.h > b.y;
+}
+function circlesOverlap(x1, y1, r1, x2, y2, r2) {
+  const dx = x1 - x2, dy = y1 - y2;
+  return dx*dx + dy*dy < (r1 + r2) * (r1 + r2);
+}
+function formatTime(ms) {
+  const s = Math.floor(ms / 1000);
+  const m = Math.floor(s / 60);
+  return `${m}:${String(s % 60).padStart(2,'0')}`;
+}
+function lerp(a, b, t) { return a + (b - a) * t; }
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+function rand(lo, hi) { return lo + Math.random() * (hi - lo); }
+function randItem(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+function drawRoundRect(ctx, x, y, w, h, r, fill, stroke, strokeW) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.arcTo(x + w, y, x + w, y + r, r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+  ctx.lineTo(x + r, y + h);
+  ctx.arcTo(x, y + h, x, y + h - r, r);
+  ctx.lineTo(x, y + r);
+  ctx.arcTo(x, y, x + r, y, r);
+  ctx.closePath();
+  if (fill)   { ctx.fillStyle = fill; ctx.fill(); }
+  if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = strokeW || 2; ctx.stroke(); }
+}
+
+function drawButton(ctx, label, x, y, w, h, hot) {
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.55)';
+  ctx.shadowBlur  = 10;
+  ctx.shadowOffsetY = 4;
+
+  if (hot) {
+    const cx = x + w / 2, cy = y + h / 2;
+    ctx.translate(cx, cy);
+    ctx.scale(1.04, 1.04);
+    ctx.translate(-cx, -cy);
+  }
+
+  const grad = ctx.createLinearGradient(x, y, x, y + h);
+  if (hot) {
+    grad.addColorStop(0, '#fffde0');
+    grad.addColorStop(1, '#ffd700');
+  } else {
+    grad.addColorStop(0, '#263a5a');
+    grad.addColorStop(1, '#1a2540');
+  }
+  drawRoundRect(ctx, x, y, w, h, 14, grad, hot ? '#ffd700' : '#4488cc', 2);
+
+  ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+  ctx.fillStyle = hot ? '#111' : '#eee';
+  ctx.font = 'bold 20px Segoe UI, Arial';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(label, x + w / 2, y + h / 2);
+  ctx.restore();
+}
+
+// ─── Flag drawing ─────────────────────────────────────────────────────────────
+function _drawStar(ctx, cx, cy, r, color) {
+  ctx.fillStyle = color;
+  for (let i = 0; i < 2; i++) {
+    ctx.beginPath();
+    for (let k = 0; k < 3; k++) {
+      const angle = (k * 120 + i * 60) * Math.PI / 180;
+      const px = cx + r * Math.sin(angle);
+      const py = cy - r * Math.cos(angle);
+      k === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.fill();
+  }
+}
+
+function drawIsraelFlag(ctx, cx, cy, size) {
+  const w = size * 1.5, h = size;
+  const x = cx - w / 2, y = cy - h / 2;
+  ctx.fillStyle = '#fff';     ctx.fillRect(x, y, w, h);
+  ctx.fillStyle = '#0038b8';
+  ctx.fillRect(x, y + h * 0.20, w, h * 0.18);
+  ctx.fillRect(x, y + h * 0.62, w, h * 0.18);
+  _drawStar(ctx, cx, cy, size * 0.22, '#0038b8');
+}
+
+function drawIranFlag(ctx, cx, cy, size) {
+  const w = size * 1.5, h = size;
+  const x = cx - w / 2, y = cy - h / 2;
+  ctx.fillStyle = '#239f40'; ctx.fillRect(x, y,             w, h / 3);
+  ctx.fillStyle = '#fff';    ctx.fillRect(x, y + h / 3,     w, h / 3);
+  ctx.fillStyle = '#da0000'; ctx.fillRect(x, y + h * 2 / 3, w, h / 3);
+}
+
+// ─── Particle ─────────────────────────────────────────────────────────────────
+class Particle {
+  constructor(x, y, emoji, vx, vy, life, size) {
+    this.x = x; this.y = y;
+    this.emoji = emoji;
+    this.vx = vx; this.vy = vy;
+    this.life = life; this.maxLife = life;
+    this.size = size || 20;
+    this.alpha = 1;
+  }
+  update(dt) {
+    this.x += this.vx * dt / 16;
+    this.y += this.vy * dt / 16;
+    this.vy += 0.15 * dt / 16;
+    this.life -= dt;
+    this.alpha = clamp(this.life / this.maxLife, 0, 1);
+  }
+  draw(ctx) {
+    ctx.save();
+    ctx.globalAlpha = this.alpha;
+    ctx.font = `${this.size}px serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(this.emoji, this.x, this.y);
+    ctx.restore();
+  }
+  get dead() { return this.life <= 0; }
+}
+
+class ParticleSystem {
+  constructor() { this.particles = []; }
+  spawn(x, y, emoji, vx, vy, life, size) {
+    this.particles.push(new Particle(x, y, emoji, vx, vy, life, size));
+  }
+  spawnHit(x, y) {
+    const emojis = ['💥','✨','💛','💫'];
+    for (let i = 0; i < 5; i++) {
+      this.spawn(x, y, randItem(emojis),
+        rand(-3, 3), rand(-4, -1), rand(500, 900), rand(16, 24));
+    }
+  }
+  spawnHurt(x, y) {
+    for (let i = 0; i < 4; i++) {
+      this.spawn(x, y, '💔', rand(-2, 2), rand(-3, -1), rand(400, 700), 20);
+    }
+  }
+  spawnWinFlood(w, h) {
+    const symbols = ['❤️','🕊️','🌸','💕','🌈','⭐','🎉','✨','🦋','🌺'];
+    for (let i = 0; i < 80; i++) {
+      this.spawn(rand(0, w), rand(0, h), randItem(symbols),
+        rand(-2, 2), rand(-5, -1), rand(2000, 5000), rand(20, 36));
+    }
+  }
+  update(dt) {
+    for (const p of this.particles) p.update(dt);
+    this.particles = this.particles.filter(p => !p.dead);
+  }
+  draw(ctx) { for (const p of this.particles) p.draw(ctx); }
+}
+
+// ─── Projectiles ──────────────────────────────────────────────────────────────
+class Projectile {
+  constructor(x, y, emoji) {
+    this.x = x; this.y = y;
+    this.emoji = emoji;
+    this.size = C.PROJ_SIZE;
+    this.alive = true;
+  }
+  get rect() { return { x: this.x - this.size/2, y: this.y - this.size/2, w: this.size, h: this.size }; }
+  draw(ctx) {
+    ctx.font = `${this.size}px serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(this.emoji, this.x, this.y);
+  }
+}
+
+class IsraelProjectile extends Projectile {
+  constructor(x, y) {
+    super(x, y, randItem(C.ISRAEL_PROJS));
+    this.vx = 11; this.vy = 0;
+  }
+  update(dt) {
+    this.x += this.vx * dt / 16;
+    if (this.x > C.W + 30) this.alive = false;
+  }
+}
+
+class IranProjectile extends Projectile {
+  constructor(x, y, speedMult, unlockedTypes, targetY) {
+    const pool = C.IRAN_PROJS.slice(0, unlockedTypes);
+    super(x, y, randItem(pool));
+    const spd = (5 + Math.random() * 3) * speedMult;
+    this.vx = -spd;
+    this.vy = 0;
+    this.y = targetY + rand(-80, 80);
+  }
+  update(dt) {
+    this.x += this.vx * dt / 16;
+    if (this.x < -30) this.alive = false;
+  }
+}
+
+// ─── Player ───────────────────────────────────────────────────────────────────
+class Player {
+  constructor() { this.reset(); }
+  reset() {
+    this.x = 110;
+    this.y = C.H / 2;
+    this.w = C.PLAYER_W;
+    this.h = C.PLAYER_H;
+    this.speed = 4;
+    this.shootCooldown = 0;
+    this.hurtFlash = 0;
+  }
+  get rect() { return { x: this.x - this.w/2, y: this.y - this.h/2, w: this.w, h: this.h }; }
+  update(dt, input) {
+    if (input.up)   this.y -= this.speed * dt / 16;
+    if (input.down) this.y += this.speed * dt / 16;
+    this.x = 110;
+    this.y = clamp(this.y, C.PLAY_TOP + this.h/2, C.PLAY_BOT - this.h/2);
+    if (this.shootCooldown > 0) this.shootCooldown -= dt;
+    if (this.hurtFlash > 0)    this.hurtFlash -= dt;
+  }
+  canShoot() { return this.shootCooldown <= 0; }
+  shoot() {
+    this.shootCooldown = 350;
+    return new IsraelProjectile(this.x + this.w/2, this.y);
+  }
+  draw(ctx) {
+    ctx.save();
+    if (this.hurtFlash > 0) {
+      ctx.globalAlpha = 0.5 + 0.5 * Math.sin(this.hurtFlash / 80 * Math.PI);
+    }
+    drawIsraelFlag(ctx, this.x, this.y, C.PLAYER_H);
+    ctx.restore();
+  }
+}
+
+// ─── Renderer ─────────────────────────────────────────────────────────────────
+class Renderer {
+  constructor(ctx) {
+    this.ctx = ctx;
+    this.stars = Array.from({length: 60}, () => ({
+      x: rand(0, C.W), y: rand(C.PLAY_TOP, C.PLAY_BOT),
+      r: rand(0.5, 2), a: rand(0.3, 1)
+    }));
+  }
+
+  drawBackground(lovePercent) {
+    const ctx = this.ctx;
+    const grad = ctx.createLinearGradient(0, C.PLAY_TOP, 0, C.PLAY_BOT);
+    grad.addColorStop(0, '#0d1b2a');
+    grad.addColorStop(1, '#1a2744');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, C.PLAY_TOP, C.W, C.PLAY_BOT - C.PLAY_TOP);
+
+    for (const s of this.stars) {
+      ctx.globalAlpha = s.a;
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    ctx.fillStyle = 'rgba(30,120,40,0.55)';
+    ctx.fillRect(0, C.PLAY_BOT - 36, C.ISRAEL_ZONE_W, 36);
+    ctx.fillStyle = 'rgba(160,100,30,0.55)';
+    ctx.fillRect(C.IRAN_ZONE_X, C.PLAY_BOT - 36, C.IRAN_ZONE_W, 36);
+    ctx.fillStyle = 'rgba(10,20,40,0.4)';
+    ctx.fillRect(C.ISRAEL_ZONE_W, C.PLAY_BOT - 36, C.IRAN_ZONE_X - C.ISRAEL_ZONE_W, 36);
+
+    ctx.strokeStyle = 'rgba(60,120,200,0.4)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([6, 4]);
+    ctx.beginPath();
+    ctx.moveTo(C.ISRAEL_ZONE_W, C.PLAY_TOP);
+    ctx.lineTo(C.ISRAEL_ZONE_W, C.PLAY_BOT);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(C.IRAN_ZONE_X, C.PLAY_TOP);
+    ctx.lineTo(C.IRAN_ZONE_X, C.PLAY_BOT);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.save();
+    ctx.font = 'bold 13px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = 'rgba(120,160,220,0.5)';
+    ctx.fillText(L.battlefield, (C.ISRAEL_ZONE_W + C.IRAN_ZONE_X) / 2, C.PLAY_TOP + 20);
+
+    const midX = (C.ISRAEL_ZONE_W + C.IRAN_ZONE_X) / 2;
+    const pulse2 = 0.5 + 0.5 * Math.sin(Date.now() / 500);
+    ctx.globalAlpha = 0.3 + 0.3 * pulse2;
+    ctx.font = 'bold 20px Arial';
+    ctx.fillStyle = '#ffee88';
+    ctx.fillText(L.loveArrow, midX, (C.PLAY_TOP + C.PLAY_BOT) / 2);
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+
+  drawIsraelZone(ctx) {
+    ctx.save();
+    ctx.shadowBlur = 30;
+    ctx.shadowColor = 'rgba(0,160,255,0.5)';
+    drawRoundRect(ctx, 10, C.PLAY_TOP + 10, C.ISRAEL_ZONE_W - 20, C.PLAY_BOT - C.PLAY_TOP - 20,
+      12, 'rgba(0,80,160,0.30)', '#1e90ff', 2);
+    ctx.restore();
+
+    drawIsraelFlag(ctx, C.ISRAEL_ZONE_W / 2, C.PLAY_TOP + 36, 44);
+
+    ctx.save();
+    ctx.font = 'bold 18px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillStyle = '#ffffff';
+    ctx.shadowBlur = 8; ctx.shadowColor = '#004488';
+    ctx.fillText(L.yourBase, C.ISRAEL_ZONE_W / 2, C.PLAY_TOP + 66);
+    ctx.font = '13px Arial';
+    ctx.fillStyle = '#88ccff';
+    ctx.shadowBlur = 0;
+    ctx.fillText(L.israelSub, C.ISRAEL_ZONE_W / 2, C.PLAY_TOP + 88);
+    ctx.restore();
+  }
+
+  drawIranZone(ctx, lovePercent, enemyY) {
+    const r = Math.round(lerp(180, 255, lovePercent));
+    const g = Math.round(lerp(20,  100, lovePercent));
+    const b = Math.round(lerp(20,  160, lovePercent));
+    const glowColor = `rgba(${r},${g},${b},0.6)`;
+
+    ctx.save();
+    ctx.shadowBlur = 30;
+    ctx.shadowColor = glowColor;
+    drawRoundRect(ctx, C.IRAN_ZONE_X + 10, C.PLAY_TOP + 10, C.IRAN_ZONE_W - 20,
+      C.PLAY_BOT - C.PLAY_TOP - 20, 12,
+      `rgba(${r},${g},${b},0.22)`, `rgb(${r},${g},${b})`, 2);
+    ctx.restore();
+
+    drawIranFlag(ctx, C.IRAN_ZONE_X + C.IRAN_ZONE_W / 2, C.PLAY_TOP + 36, 44);
+
+    ctx.save();
+    ctx.font = 'bold 18px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillStyle = '#ff8844';
+    ctx.shadowBlur = 10; ctx.shadowColor = '#ff4400';
+    ctx.fillText(L.sendLove, C.IRAN_ZONE_X + C.IRAN_ZONE_W / 2, C.PLAY_TOP + 66);
+    ctx.shadowBlur = 0;
+    ctx.font = '13px Arial';
+    ctx.fillStyle = `rgb(${r},${g},${b})`;
+    ctx.fillText(L.iranSub, C.IRAN_ZONE_X + C.IRAN_ZONE_W / 2, C.PLAY_TOP + 88);
+    ctx.restore();
+
+    const enemyX = C.IRAN_ZONE_X + C.IRAN_ZONE_W / 2;
+    drawIranFlag(ctx, enemyX, enemyY, 70);
+  }
+
+  drawLoveMeter(ctx, lovePercent) {
+    const mx = C.IRAN_ZONE_X + 20;
+    const my = C.PLAY_BOT - 70;
+    const mw = C.IRAN_ZONE_W - 40;
+    const mh = 18;
+    drawRoundRect(ctx, mx, my, mw, mh, 9, 'rgba(0,0,0,0.5)', '#ff8888', 1);
+    const fw = mw * lovePercent;
+    if (fw > 0) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.roundRect(mx, my, fw, mh, 9);
+      ctx.clip();
+      const grad = ctx.createLinearGradient(mx, 0, mx + mw, 0);
+      grad.addColorStop(0, '#ff6699');
+      grad.addColorStop(1, '#ffccee');
+      ctx.fillStyle = grad;
+      ctx.fillRect(mx, my, fw, mh);
+      ctx.restore();
+    }
+    ctx.save();
+    ctx.font = 'bold 12px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#fff';
+    ctx.fillText(L.lovePct(Math.round(lovePercent * 100)), mx + mw / 2, my + mh / 2);
+    ctx.restore();
+  }
+
+  drawTopBar(ctx, score, elapsed) {
+    ctx.fillStyle = '#0c1628';
+    ctx.fillRect(0, 0, C.W, C.TOP_BAR);
+    ctx.strokeStyle = '#1e3a6e';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(0, C.TOP_BAR); ctx.lineTo(C.W, C.TOP_BAR); ctx.stroke();
+
+    drawIsraelFlag(ctx, 27, C.TOP_BAR / 2, 22);
+    ctx.font = 'bold 16px Arial';
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#ffd700';
+    ctx.fillText(L.topTitle, 50, C.TOP_BAR / 2);
+
+    // Score progress bar
+    const barX = 270, barW = 360, barH = 24, barY = (C.TOP_BAR - barH) / 2;
+    const lp = clamp(score / C.GOAL_SCORE, 0, 1);
+    drawRoundRect(ctx, barX, barY, barW, barH, 12, 'rgba(0,0,0,0.4)', 'rgba(100,160,255,0.35)', 1);
+    if (lp > 0) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.roundRect(barX, barY, barW * lp, barH, 12);
+      ctx.clip();
+      const grad = ctx.createLinearGradient(barX, 0, barX + barW, 0);
+      grad.addColorStop(0,   '#1a44dd');
+      grad.addColorStop(0.5, '#cc44aa');
+      grad.addColorStop(1,   '#ff88cc');
+      ctx.fillStyle = grad;
+      ctx.fillRect(barX, barY, barW, barH);
+      ctx.restore();
+    }
+    ctx.save();
+    ctx.font = 'bold 13px Bangers, Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#ffffff';
+    ctx.shadowBlur = 4; ctx.shadowColor = '#000';
+    ctx.fillText(`${score} / ${C.GOAL_SCORE}`, barX + barW / 2, barY + barH / 2);
+    ctx.restore();
+
+    ctx.font = 'bold 16px Arial';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#aaddff';
+    ctx.fillText(`⏱ ${formatTime(elapsed)}`, C.W - 16, C.TOP_BAR / 2);
+  }
+
+  drawBottomBar(ctx, input) {
+    ctx.fillStyle = '#0c1628';
+    ctx.fillRect(0, C.PLAY_BOT, C.W, C.BOT_BAR);
+    ctx.strokeStyle = '#1e3a6e';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(0, C.PLAY_BOT); ctx.lineTo(C.W, C.PLAY_BOT); ctx.stroke();
+
+    const by = C.PLAY_BOT + 10, bh = 60;
+    drawButton(ctx, L.upBtn,    16,  by, 200, bh, input.up);
+    drawButton(ctx, L.shootBtn, 230, by, 355, bh, input.shoot);
+    drawButton(ctx, L.downBtn,  600, by, 200, bh, input.down);
+
+    ctx.font = '10px Arial';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#334466';
+    ctx.fillText('© tamir.devlab@gmail.com  2016', C.W - 10, C.PLAY_BOT + C.BOT_BAR - 8);
+  }
+
+  drawStartScreen(ctx) {
+    ctx.fillStyle = 'rgba(10,15,30,0.93)';
+    ctx.fillRect(0, 0, C.W, C.H);
+
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    // Title
+    drawIsraelFlag(ctx, C.W / 2 - 195, 90, 44);
+    ctx.font = 'bold 48px Bangers, Arial';
+    ctx.fillStyle = '#ffd700';
+    ctx.shadowBlur = 20; ctx.shadowColor = '#ffd700';
+    ctx.fillText(L.title, C.W / 2 + 28, 90);
+    ctx.shadowBlur = 0;
+
+    // Subtitle — the goal / mission statement
+    ctx.font = 'bold 18px Arial';
+    ctx.fillStyle = '#aaddff';
+    ctx.fillText(L.subtitle, C.W / 2, 130);
+
+    // ── How-to panel ──────────────────────────────────────────────────────
+    const px = C.W / 2 - 280, pw = 560, py = 155, ph = 210;
+    drawRoundRect(ctx, px, py, pw, ph, 14, 'rgba(8,18,48,0.88)', 'rgba(80,140,255,0.5)', 2);
+
+    ctx.font = 'bold 17px Bangers, Arial';
+    ctx.fillStyle = '#ffd700';
+    ctx.fillText(L.howToPlay, C.W / 2, py + 22);
+
+    ctx.font = '15px Arial';
+    ctx.fillStyle = '#ccddff';
+    ctx.fillText(L.moveLine,  C.W / 2, py + 55);
+    ctx.fillText(L.shootLine, C.W / 2, py + 80);
+
+    // Good emojis
+    ctx.font = 'bold 13px Arial';
+    ctx.fillStyle = '#aaffaa';
+    ctx.fillText(L.sendThese, C.W / 2 - 100, py + 115);
+    ctx.font = '22px serif';
+    ['💕','🌸','🦄','😊','⭐','🎀'].forEach((e, i) =>
+      ctx.fillText(e, C.W / 2 - 20 + i * 34, py + 116));
+
+    // Bad emojis
+    ctx.font = 'bold 13px Arial';
+    ctx.fillStyle = '#ffaaaa';
+    ctx.fillText(L.dodgeThese, C.W / 2 - 100, py + 152);
+    ctx.font = '22px serif';
+    ['💩','😡','💣','🔴'].forEach((e, i) =>
+      ctx.fillText(e, C.W / 2 - 20 + i * 34, py + 153));
+
+    // Goal
+    ctx.font = 'bold 14px Arial';
+    ctx.fillStyle = '#ffffcc';
+    ctx.fillText(L.goal, C.W / 2, py + 191);
+
+    // ── Start button ──────────────────────────────────────────────────────
+    const pulse = 0.9 + 0.1 * Math.sin(Date.now() / 400);
+    ctx.save();
+    ctx.translate(C.W / 2, 428);
+    ctx.scale(pulse, pulse);
+    const btnGrad = ctx.createLinearGradient(-130, -30, -130, 30);
+    btnGrad.addColorStop(0, '#fffde0');
+    btnGrad.addColorStop(1, '#ffd700');
+    drawRoundRect(ctx, -130, -30, 260, 60, 14, btnGrad, '#fff8cc', 2);
+    ctx.font = 'bold 22px Bangers, Arial';
+    ctx.fillStyle = '#111';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(L.startBtn, 0, 0);
+    ctx.restore();
+
+    ctx.font = '11px Arial';
+    ctx.fillStyle = '#334466';
+    ctx.textAlign = 'center';
+    ctx.fillText('© tamir.devlab@gmail.com  2016', C.W / 2, C.H - 16);
+  }
+
+  drawWinScreen(ctx, score, elapsed, btnShare, btnAgain) {
+    ctx.fillStyle = 'rgba(10,15,30,0.88)';
+    ctx.fillRect(0, 0, C.W, C.H);
+
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    const pulse = 1 + 0.06 * Math.sin(Date.now() / 300);
+    ctx.save();
+    ctx.translate(C.W / 2, 130);
+    ctx.scale(pulse, pulse);
+    ctx.font = 'bold 52px Bangers, Arial';
+    ctx.shadowBlur = 30; ctx.shadowColor = '#ffd700';
+    ctx.fillStyle = '#ffd700';
+    ctx.fillText(L.shalom, 0, 0);
+    ctx.shadowBlur = 0;
+    ctx.restore();
+
+    ctx.font = 'bold 22px Arial';
+    ctx.fillStyle = '#aaffcc';
+    ctx.fillText(L.peaceBrought(formatTime(elapsed)), C.W / 2, 210);
+
+    ctx.font = 'bold 20px Arial';
+    ctx.fillStyle = '#ffffaa';
+    ctx.fillText(L.scoreLine(score), C.W / 2, 250);
+
+    ctx.font = '16px Arial';
+    ctx.fillStyle = '#88ccff';
+    ctx.fillText(L.alwaysWins, C.W / 2 - 16, 290);
+    drawIsraelFlag(ctx, C.W / 2 + 110, 290, 22);
+
+    drawButton(ctx, '📤 Share!',    btnShare.x, btnShare.y, btnShare.w, btnShare.h, false);
+    drawButton(ctx, '▶ Play Again', btnAgain.x, btnAgain.y, btnAgain.w, btnAgain.h, false);
+  }
+}
+
+// ─── SoundManager ─────────────────────────────────────────────────────────────
+class SoundManager {
+  constructor() {
+    try {
+      this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    } catch(e) { this.ctx = null; }
+  }
+  _play(freq, type, duration, vol, delay) {
+    if (!this.ctx) return;
+    try {
+      const o = this.ctx.createOscillator();
+      const g = this.ctx.createGain();
+      o.connect(g); g.connect(this.ctx.destination);
+      o.type = type || 'sine';
+      o.frequency.setValueAtTime(freq, this.ctx.currentTime + (delay||0));
+      g.gain.setValueAtTime(vol || 0.3, this.ctx.currentTime + (delay||0));
+      g.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + (delay||0) + duration);
+      o.start(this.ctx.currentTime + (delay||0));
+      o.stop(this.ctx.currentTime + (delay||0) + duration);
+    } catch(e) {}
+  }
+  resume() { if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume(); }
+  shoot()  { this._play(880, 'sine', 0.12, 0.2); this._play(1100, 'sine', 0.1, 0.15, 0.05); }
+  hit()    { [523,659,784].forEach((f,i) => this._play(f, 'triangle', 0.18, 0.25, i*0.06)); }
+  hurt()   { this._play(150, 'sawtooth', 0.25, 0.3); }
+  win()    {
+    const notes = [523,659,784,1047,1319,1568];
+    notes.forEach((f,i) => this._play(f, 'triangle', 0.4, 0.3, i * 0.1));
+  }
+}
+
+// ─── ShareCard ────────────────────────────────────────────────────────────────
+class ShareCard {
+  static generate(score, elapsed) {
+    const w = 600, h = 400;
+    const oc = document.createElement('canvas');
+    oc.width = w; oc.height = h;
+    const ctx = oc.getContext('2d');
+
+    const grad = ctx.createLinearGradient(0, 0, w, h);
+    grad.addColorStop(0, '#0d1b2a');
+    grad.addColorStop(1, '#1a2744');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, w, h);
+
+    drawRoundRect(ctx, 10, 10, w - 20, h - 20, 16, null, '#ffd700', 3);
+
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    ctx.font = 'bold 30px Arial';
+    ctx.fillStyle = '#ffd700';
+    ctx.shadowBlur = 16; ctx.shadowColor = '#ffd700';
+    ctx.fillText(L.shareTitle, w / 2, 70);
+    ctx.shadowBlur = 0;
+
+    ctx.strokeStyle = '#ffd700';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(40, 100); ctx.lineTo(w - 40, 100); ctx.stroke();
+
+    drawIsraelFlag(ctx, w / 2 - 150, 165, 26);
+    ctx.font = 'bold 24px Arial';
+    ctx.fillStyle = '#aaffcc';
+    ctx.fillText(L.sharePeace(formatTime(elapsed)), w / 2 + 10, 165);
+
+    ctx.font = 'bold 22px Arial';
+    ctx.fillStyle = '#ffffaa';
+    ctx.fillText(L.shareScore(score), w / 2, 220);
+
+    ctx.font = 'bold 28px Arial';
+    ctx.fillStyle = '#ffffff';
+    ctx.shadowBlur = 12; ctx.shadowColor = '#fff';
+    ctx.fillText('🕊️  SHALOM ACHIEVED  🕊️', w / 2, 285);
+    ctx.shadowBlur = 0;
+
+    ctx.strokeStyle = '#ffd700';
+    ctx.beginPath(); ctx.moveTo(40, 315); ctx.lineTo(w - 40, 315); ctx.stroke();
+
+    ctx.font = '15px Arial';
+    ctx.fillStyle = '#88aacc';
+    ctx.fillText('© tamir.devlab@gmail.com  2016', w / 2, 370);
+
+    return oc;
+  }
+
+  static share(score, elapsed) {
+    const card = ShareCard.generate(score, elapsed);
+    card.toBlob(blob => {
+      const file = new File([blob], 'israel-wins.png', { type: 'image/png' });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        navigator.share({
+          title: L.shareTitle,
+          text: L.sharePeace(formatTime(elapsed)) + ' ' + L.shareScore(score),
+          files: [file],
+        }).catch(() => ShareCard._download(card));
+      } else {
+        ShareCard._download(card);
+      }
+    });
+  }
+
+  static _download(canvas) {
+    const a = document.createElement('a');
+    a.download = 'israel-wins.png';
+    a.href = canvas.toDataURL('image/png');
+    a.click();
+  }
+}
+
+// ─── InputHandler ─────────────────────────────────────────────────────────────
+class InputHandler {
+  constructor(canvas, game) {
+    this.canvas = canvas;
+    this.game = game;
+    this.keys = {};
+    this._scale = 1;
+
+    document.addEventListener('keydown', e => {
+      this.keys[e.code] = true;
+      if (e.code === 'Space') { e.preventDefault(); game.onAction('shoot'); }
+      if (e.code === 'Space' && game.state !== 'PLAYING') game.onAction('start');
+    });
+    document.addEventListener('keyup', e => { this.keys[e.code] = false; });
+
+    canvas.addEventListener('touchstart', e => {
+      e.preventDefault();
+      for (const t of e.changedTouches) {
+        const pt = this._toCanvas(t);
+        game.onTouch(pt.x, pt.y, 'start');
+      }
+    }, { passive: false });
+
+    canvas.addEventListener('touchend', e => {
+      e.preventDefault();
+      for (const t of e.changedTouches) {
+        const pt = this._toCanvas(t);
+        game.onTouch(pt.x, pt.y, 'end');
+      }
+    }, { passive: false });
+
+    canvas.addEventListener('click', e => {
+      const pt = this._toCanvas(e);
+      game.onClick(pt.x, pt.y);
+    });
+  }
+
+  _toCanvas(e) {
+    const rect = this.canvas.getBoundingClientRect();
+    return {
+      x: (e.clientX - rect.left) / this._scale,
+      y: (e.clientY - rect.top)  / this._scale,
+    };
+  }
+
+  get up()    { return !!this.keys['ArrowUp']    || !!this.keys['KeyW']; }
+  get down()  { return !!this.keys['ArrowDown']  || !!this.keys['KeyS']; }
+  get shoot() { return !!this.keys['Space']; }
+}
+
+// ─── Game ─────────────────────────────────────────────────────────────────────
+class Game {
+  constructor(canvas) {
+    this.canvas = canvas;
+    this.ctx    = canvas.getContext('2d');
+    this.renderer  = new Renderer(this.ctx);
+    this.particles = new ParticleSystem();
+    this.sound     = new SoundManager();
+    this.player    = new Player();
+    this.input     = new InputHandler(canvas, this);
+
+    this.israelProjs = [];
+    this.iranProjs   = [];
+
+    this.state   = 'START';
+    this.score   = 0;
+    this.elapsed = 0;
+
+    this.iranShootTimer    = 0;
+    this.iranShootInterval = 1400;
+    this.iranSpeedMult     = 1.2;
+    this.diffTimer         = 0;
+    this.unlockedTypes     = 2;
+    this.iranEnemy = { y: (C.PLAY_TOP + C.PLAY_BOT) / 2, vy: 1 };
+
+    this._btnShare = { x: C.W/2 - 220, y: 340, w: 200, h: 46 };
+    this._btnAgain = { x: C.W/2 + 20,  y: 340, w: 200, h: 46 };
+
+    this._lastTime = null;
+    this._raf = requestAnimationFrame(ts => this._loop(ts));
+
+    scaleCanvas();
+  }
+
+  onAction(action) {
+    this.sound.resume();
+    if (this.state === 'START' && (action === 'start' || action === 'shoot')) {
+      this._startGame();
+      return;
+    }
+    if (this.state !== 'PLAYING') return;
+    if (action === 'shoot') this._playerShoot();
+  }
+
+  onTouch(x, y, phase) {
+    this.sound.resume();
+    if (this.state === 'START') { this._startGame(); return; }
+    if (this.state === 'WIN')   return;
+    if (phase !== 'start') return;
+
+    const by = C.PLAY_BOT + 10, bh = 60;
+    if (x >= 16  && x <= 216 && y >= by && y <= by + bh) {
+      this.input.keys['ArrowUp'] = true;
+      setTimeout(() => { this.input.keys['ArrowUp'] = false; }, 200);
+    }
+    if (x >= 600 && x <= 800 && y >= by && y <= by + bh) {
+      this.input.keys['ArrowDown'] = true;
+      setTimeout(() => { this.input.keys['ArrowDown'] = false; }, 200);
+    }
+    if (x >= 230 && x <= 585 && y >= by && y <= by + bh) this._playerShoot();
+  }
+
+  onClick(x, y) {
+    this.sound.resume();
+    if (this.state === 'START') { this._startGame(); return; }
+    if (this.state === 'WIN') {
+      const s = this._btnShare, a = this._btnAgain;
+      if (x >= s.x && x <= s.x+s.w && y >= s.y && y <= s.y+s.h) ShareCard.share(this.score, this.elapsed);
+      if (x >= a.x && x <= a.x+a.w && y >= a.y && y <= a.y+a.h) this._reset();
+    }
+  }
+
+  _startGame() {
+    this._reset();
+    this.state = 'PLAYING';
+    this._lastTime = null;
+  }
+
+  _reset() {
+    this.state   = 'START';
+    this.score   = 0;
+    this.elapsed = 0;
+    this.israelProjs = [];
+    this.iranProjs   = [];
+    this.particles   = new ParticleSystem();
+    this.player.reset();
+    this.iranShootTimer    = 0;
+    this.iranShootInterval = 1400;
+    this.iranSpeedMult     = 1.2;
+    this.diffTimer         = 0;
+    this.unlockedTypes     = 2;
+    this.iranEnemy = { y: (C.PLAY_TOP + C.PLAY_BOT) / 2, vy: 1 };
+    this._lastTime = null;
+  }
+
+  _playerShoot() {
+    if (!this.player.canShoot()) return;
+    const proj = this.player.shoot();
+    this.israelProjs.push(proj);
+    this.sound.shoot();
+  }
+
+  _iranShoot() {
+    const x = C.IRAN_ZONE_X + C.IRAN_ZONE_W / 2;
+    this.iranProjs.push(new IranProjectile(x, this.iranEnemy.y,
+      this.iranSpeedMult, this.unlockedTypes, this.player.y));
+  }
+
+  _win() {
+    this.state = 'WIN';
+    this.particles.spawnWinFlood(C.W, C.H);
+    this.sound.win();
+  }
+
+  _update(dt) {
+    if (this.state !== 'PLAYING') return;
+
+    this.elapsed += dt;
+    this.diffTimer += dt;
+
+    if (this.diffTimer >= C.DIFFICULTY_INTERVAL) {
+      this.diffTimer -= C.DIFFICULTY_INTERVAL;
+      this.iranSpeedMult     += 0.25;
+      this.iranShootInterval = Math.max(600, this.iranShootInterval - 250);
+      if (this.unlockedTypes < C.IRAN_PROJS.length) this.unlockedTypes++;
+    }
+
+    this.player.update(dt, this.input);
+    if (this.input.shoot && this.player.canShoot()) this._playerShoot();
+
+    this.iranShootTimer += dt;
+    if (this.iranShootTimer >= this.iranShootInterval) {
+      this.iranShootTimer = 0;
+      this._iranShoot();
+    }
+
+    const enemySpd = 1.8 * this.iranSpeedMult;
+    this.iranEnemy.y += this.iranEnemy.vy * enemySpd * dt / 16;
+    if (this.iranEnemy.y < C.PLAY_TOP + 50) { this.iranEnemy.y = C.PLAY_TOP + 50; this.iranEnemy.vy =  1; }
+    if (this.iranEnemy.y > C.PLAY_BOT - 50) { this.iranEnemy.y = C.PLAY_BOT - 50; this.iranEnemy.vy = -1; }
+
+    for (const p of this.israelProjs) p.update(dt);
+    for (const p of this.iranProjs)   p.update(dt);
+
+    const PROJ_R  = C.PROJ_SIZE * 0.45;
+    const ENEMY_R = 30;
+    const enemyX  = C.IRAN_ZONE_X + C.IRAN_ZONE_W / 2;
+    for (const p of this.israelProjs) {
+      if (!p.alive) continue;
+      if (circlesOverlap(p.x, p.y, PROJ_R, enemyX, this.iranEnemy.y, ENEMY_R)) {
+        p.alive = false;
+        this.score = Math.min(C.GOAL_SCORE, this.score + C.SCORE_HIT);
+        this.particles.spawnHit(p.x, p.y);
+        this.sound.hit();
+        if (this.score >= C.GOAL_SCORE) { this._win(); return; }
+      }
+    }
+
+    const PLAYER_R = 22;
+    for (const p of this.iranProjs) {
+      if (!p.alive) continue;
+      if (circlesOverlap(p.x, p.y, PROJ_R, this.player.x, this.player.y, PLAYER_R)) {
+        p.alive = false;
+        this.score = Math.max(0, this.score - C.SCORE_HURT);
+        this.player.hurtFlash = 500;
+        this.particles.spawnHurt(p.x, p.y);
+        this.sound.hurt();
+      }
+    }
+
+    this.israelProjs = this.israelProjs.filter(p => p.alive);
+    this.iranProjs   = this.iranProjs.filter(p => p.alive);
+    this.particles.update(dt);
+  }
+
+  _draw() {
+    const ctx = this.ctx;
+    const lp  = clamp(this.score / C.GOAL_SCORE, 0, 1);
+
+    ctx.clearRect(0, 0, C.W, C.H);
+
+    if (this.state === 'START') {
+      this.renderer.drawBackground(0);
+      this.renderer.drawStartScreen(ctx);
+      this.particles.draw(ctx);
+      return;
+    }
+
+    this.renderer.drawBackground(lp);
+    this.renderer.drawIsraelZone(ctx);
+    this.renderer.drawIranZone(ctx, lp, this.iranEnemy.y);
+    this.renderer.drawLoveMeter(ctx, lp);
+
+    for (const p of this.israelProjs) p.draw(ctx);
+    for (const p of this.iranProjs)   p.draw(ctx);
+
+    this.player.draw(ctx);
+    this.particles.draw(ctx);
+
+    this.renderer.drawTopBar(ctx, this.score, this.elapsed);
+    this.renderer.drawBottomBar(ctx, this.input);
+
+    if (this.state === 'WIN') {
+      this.renderer.drawWinScreen(ctx, this.score, this.elapsed, this._btnShare, this._btnAgain);
+    }
+  }
+
+  _loop(ts) {
+    if (this._lastTime === null) this._lastTime = ts;
+    const dt = Math.min(ts - this._lastTime, 50);
+    this._lastTime = ts;
+    this._update(dt);
+    this._draw();
+    this._raf = requestAnimationFrame(t => this._loop(t));
+  }
+}
+
+// ─── Responsive scaling ───────────────────────────────────────────────────────
+const container = document.getElementById('container');
+function scaleCanvas() {
+  const scale = Math.min(window.innerWidth / C.W, window.innerHeight / C.H);
+  container.style.transform = `scale(${scale})`;
+  if (window._game && window._game.input) {
+    window._game.input._scale = scale;
+  }
+}
+window.addEventListener('resize', scaleCanvas);
+
+// ─── Bootstrap ────────────────────────────────────────────────────────────────
+window.onload = () => {
+  const canvas = document.getElementById('gameCanvas');
+  window._game = new Game(canvas);
+  scaleCanvas();
+};
+</script>
+</body>
+</html>
