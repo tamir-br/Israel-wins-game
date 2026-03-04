@@ -1,0 +1,11 @@
+{
+  "name": "ישראל מנצחת",
+  "short_name": "ישראל מנצחת",
+  "description": "שגר אהבה לעם האירני — והבא שלום",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#0a0a1a",
+  "theme_color": "#0a0a1a",
+  "start_url": "./",
+  "icons": []
+}

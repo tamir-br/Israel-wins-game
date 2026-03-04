@@ -2,32 +2,35 @@
 <html lang="he" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-fullscreen">
+<meta name="theme-color" content="#0a0a1a">
+<link rel="manifest" href="manifest.json">
 <title>ישראל מנצחת - שאגת הארי</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bangers&display=swap" rel="stylesheet">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body {
+  html, body {
     background: #0a0a1a;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 100vw;
-    height: 100dvh; /* dynamic — excludes browser chrome on mobile */
+    width: 100%;
+    height: 100%;
     overflow: hidden;
     font-family: 'Segoe UI', Arial, sans-serif;
   }
   #container {
-    position: relative;
-    width: 900px;
-    height: 600px;
-    transform-origin: center center;
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
   }
   #gameCanvas {
     display: block;
-    border-radius: 8px;
-    box-shadow: 0 0 40px rgba(0,150,255,0.3);
+    position: absolute;
+    top: 0; left: 0;
   }
   #portrait-overlay {
     display: none;
@@ -69,7 +72,7 @@
   <p id="rotate-msg">Rotate your phone<br>for the best experience!</p>
 </div>
 <div id="container">
-  <canvas id="gameCanvas" width="900" height="600"></canvas>
+  <canvas id="gameCanvas"></canvas>
 </div>
 <script>
 'use strict';
@@ -91,7 +94,7 @@ if (isHebrew) {
 
 const L = isHebrew ? {
   title:        'ישראל מנצחת!',
-  subtitle:     'שגר אהבה לעם איראן — והבא שלום',
+  subtitle:     'שגר אהבה לעם האירני — והבא שלום',
   topTitle:     'ישראל מנצחת',
   yourBase:     '🏠 הבסיס שלך',
   israelSub:    '(ישראל)',
@@ -99,9 +102,9 @@ const L = isHebrew ? {
   iranSub:      '(איראן)',
   howToPlay:    'איך לשחק',
   moveLine:     'גרור צד שמאל — לשלוט בגובה',
-  shootLine:    'הקש צד ימין — לשגר אהבה לעם איראן',
-  sendThese:    'שגר אלה:',
-  dodgeThese:   'התחמק מאלה:',
+  shootLine:    'הקש בצד ימין — לשגר אהבה לעם האירני',
+  sendThese:    ':שגר אלה',
+  dodgeThese:   ':התחמק מאלה',
   goal:         '!מלא את סרגל ❤️ ל-1000 והבא שלום',
   startBtn:     '▶ לחץ להתחיל',
   upBtn:        '↑',
@@ -131,7 +134,7 @@ const L = isHebrew ? {
   sendThese:    'SEND THESE:',
   dodgeThese:   'DODGE THESE:',
   goal:         'Fill the ❤️ bar to 1000 and bring SHALOM!',
-  startBtn:     '▶ TAP TO START / TOUCH',
+  startBtn:     '▶ TAP TO START',
   upBtn:        '↑',
   shootBtn:     '💕 SHOOT',
   downBtn:      '↓',
@@ -147,7 +150,7 @@ const L = isHebrew ? {
   shareScore:   s  => `Score: ${s.toLocaleString()} pts`,
 };
 
-// ─── Constants ───────────────────────────────────────────────────────────────
+// ─── Constants (logical 900×600 coordinate space) ────────────────────────────
 const C = {
   W: 900, H: 600,
   TOP_BAR: 50, BOT_BAR: 80,
@@ -164,19 +167,50 @@ const C = {
   IRAN_PROJS:   ['💩','😡','💣','🔴'],
 };
 
+// ─── Responsive scaling (fills full viewport width) ──────────────────────────
+const BASE_W = C.W, BASE_H = C.H;
+let _gameScale = 1;
+
+function resizeCanvas() {
+  const vp = window.visualViewport || window;
+  const vw = Math.round(vp.width  || window.innerWidth);
+  const vh = Math.round(vp.height || window.innerHeight);
+  _gameScale = vw / BASE_W;          // fill full width, uniform scale
+  const cw = vw;
+  const ch = Math.round(BASE_H * _gameScale);
+  const canvas = document.getElementById('gameCanvas');
+  canvas.width  = cw;
+  canvas.height = ch;
+  canvas.style.width  = cw + 'px';
+  canvas.style.height = ch + 'px';
+  if (window._game && window._game.input) {
+    window._game.input._gameScale = _gameScale;
+  }
+}
+window.addEventListener('resize', resizeCanvas);
+if (window.visualViewport) window.visualViewport.addEventListener('resize', resizeCanvas);
+
 // ─── Asset images ─────────────────────────────────────────────────────────────
 const IMG = {};
 (function() {
   IMG.israel = new Image(); IMG.israel.src = 'assets/Israel.png';
-  IMG.iran   = new Image(); IMG.iran.src   = 'assets/Iran.svg.webp';
+  IMG.iran   = new Image(); IMG.iran.src   = 'assets/haminai.jpg';
 })();
 
-// Draw image centered at (cx,cy) with given height; returns true if drawn
 function drawFlagImg(ctx, img, cx, cy, height) {
   if (!img || !img.complete || !img.naturalWidth) return false;
   const w = height * (img.naturalWidth / img.naturalHeight);
   ctx.drawImage(img, cx - w / 2, cy - height / 2, w, height);
   return true;
+}
+
+// ─── RTL-aware text helper ────────────────────────────────────────────────────
+// Use for all L.xxx labels so Hebrew direction is respected
+function lText(ctx, text, x, y) {
+  const prev = ctx.direction;
+  ctx.direction = isHebrew ? 'rtl' : 'ltr';
+  ctx.fillText(text, x, y);
+  ctx.direction = prev;
 }
 
 // ─── Utilities ────────────────────────────────────────────────────────────────
@@ -242,11 +276,12 @@ function drawButton(ctx, label, x, y, w, h, hot) {
   ctx.font = 'bold 20px Segoe UI, Arial';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
+  ctx.direction = 'ltr';
   ctx.fillText(label, x + w / 2, y + h / 2);
   ctx.restore();
 }
 
-// ─── Flag drawing ─────────────────────────────────────────────────────────────
+// ─── Flag drawing (fallback if images not loaded) ─────────────────────────────
 function _drawStar(ctx, cx, cy, r, color) {
   ctx.fillStyle = color;
   for (let i = 0; i < 2; i++) {
@@ -265,15 +300,11 @@ function _drawStar(ctx, cx, cy, r, color) {
 function drawIsraelFlag(ctx, cx, cy, size) {
   const w = size * 1.5, h = size;
   const x = cx - w / 2, y = cy - h / 2;
-  // White background
   ctx.fillStyle = '#fff'; ctx.fillRect(x, y, w, h);
-  // Blue stripes
   ctx.fillStyle = '#0038b8';
   ctx.fillRect(x, y + h * 0.20, w, h * 0.18);
   ctx.fillRect(x, y + h * 0.62, w, h * 0.18);
-  // Star of David — larger so it's visible at small sizes
   _drawStar(ctx, cx, cy, size * 0.28, '#0038b8');
-  // Thin border so it doesn't disappear on dark backgrounds
   ctx.strokeStyle = '#aac0e0';
   ctx.lineWidth = Math.max(0.5, size * 0.02);
   ctx.strokeRect(x, y, w, h);
@@ -285,7 +316,6 @@ function drawIranFlag(ctx, cx, cy, size) {
   ctx.fillStyle = '#239f40'; ctx.fillRect(x, y,             w, h / 3);
   ctx.fillStyle = '#fff';    ctx.fillRect(x, y + h / 3,     w, h / 3);
   ctx.fillStyle = '#da0000'; ctx.fillRect(x, y + h * 2 / 3, w, h / 3);
-  // Thin white sword/tulip hint in center stripe (simplified)
   ctx.strokeStyle = '#c8a000';
   ctx.lineWidth = Math.max(0.5, size * 0.02);
   ctx.strokeRect(x, y, w, h);
@@ -314,6 +344,7 @@ class Particle {
     ctx.font = `${this.size}px serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
+    ctx.direction = 'ltr';
     ctx.fillText(this.emoji, this.x, this.y);
     ctx.restore();
   }
@@ -361,6 +392,7 @@ class Projectile {
   }
   get rect() { return { x: this.x - this.size/2, y: this.y - this.size/2, w: this.size, h: this.size }; }
   draw(ctx) {
+    ctx.direction = 'ltr';
     ctx.font = `${this.size}px serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -483,14 +515,14 @@ class Renderer {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillStyle = 'rgba(120,160,220,0.5)';
-    ctx.fillText(L.battlefield, (C.ISRAEL_ZONE_W + C.IRAN_ZONE_X) / 2, C.PLAY_TOP + 20);
+    lText(ctx, L.battlefield, (C.ISRAEL_ZONE_W + C.IRAN_ZONE_X) / 2, C.PLAY_TOP + 20);
 
     const midX = (C.ISRAEL_ZONE_W + C.IRAN_ZONE_X) / 2;
     const pulse2 = 0.5 + 0.5 * Math.sin(Date.now() / 500);
     ctx.globalAlpha = 0.3 + 0.3 * pulse2;
     ctx.font = 'bold 20px Arial';
     ctx.fillStyle = '#ffee88';
-    ctx.fillText(L.loveArrow, midX, (C.PLAY_TOP + C.PLAY_BOT) / 2);
+    lText(ctx, L.loveArrow, midX, (C.PLAY_TOP + C.PLAY_BOT) / 2);
     ctx.globalAlpha = 1;
     ctx.restore();
   }
@@ -504,17 +536,17 @@ class Renderer {
     ctx.restore();
 
     ctx.save();
-    ctx.font = 'bold 24px Arial';
+    ctx.font = 'bold 26px Arial';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillStyle = '#ffffff';
     ctx.shadowBlur = 10; ctx.shadowColor = '#004488';
-    ctx.fillText(isHebrew ? 'ישראל' : 'ISRAEL', C.ISRAEL_ZONE_W / 2, C.PLAY_TOP + 38);
+    lText(ctx, isHebrew ? 'ישראל' : 'ISRAEL', C.ISRAEL_ZONE_W / 2, C.PLAY_TOP + 38);
     ctx.shadowBlur = 0;
     ctx.font = '13px Arial';
     ctx.fillStyle = '#88ccff';
     ctx.textBaseline = 'top';
-    ctx.fillText(L.yourBase, C.ISRAEL_ZONE_W / 2, C.PLAY_TOP + 58);
+    lText(ctx, L.yourBase, C.ISRAEL_ZONE_W / 2, C.PLAY_TOP + 58);
     ctx.restore();
   }
 
@@ -533,21 +565,21 @@ class Renderer {
     ctx.restore();
 
     ctx.save();
-    ctx.font = 'bold 24px Arial';
+    ctx.font = 'bold 26px Arial';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillStyle = '#ff8844';
     ctx.shadowBlur = 10; ctx.shadowColor = '#ff4400';
-    ctx.fillText(isHebrew ? 'איראן' : 'IRAN', C.IRAN_ZONE_X + C.IRAN_ZONE_W / 2, C.PLAY_TOP + 38);
+    lText(ctx, isHebrew ? 'איראן' : 'IRAN', C.IRAN_ZONE_X + C.IRAN_ZONE_W / 2, C.PLAY_TOP + 38);
     ctx.shadowBlur = 0;
     ctx.font = '13px Arial';
     ctx.fillStyle = `rgb(${r},${g},${b})`;
     ctx.textBaseline = 'top';
-    ctx.fillText(L.sendLove, C.IRAN_ZONE_X + C.IRAN_ZONE_W / 2, C.PLAY_TOP + 58);
+    lText(ctx, L.sendLove, C.IRAN_ZONE_X + C.IRAN_ZONE_W / 2, C.PLAY_TOP + 58);
     ctx.restore();
 
     const enemyX = C.IRAN_ZONE_X + C.IRAN_ZONE_W / 2;
-    if (!drawFlagImg(ctx, IMG.iran, enemyX, enemyY, 70))
+    if (!drawFlagImg(ctx, IMG.iran, enemyX, enemyY, 80))
       drawIranFlag(ctx, enemyX, enemyY, 70);
   }
 
@@ -571,6 +603,7 @@ class Renderer {
       ctx.restore();
     }
     ctx.save();
+    ctx.direction = 'ltr';
     ctx.font = 'bold 12px Arial';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -592,7 +625,7 @@ class Renderer {
     ctx.textBaseline = 'middle';
     ctx.textAlign = 'left';
     ctx.fillStyle = '#ffd700';
-    ctx.fillText(L.topTitle, 50, C.TOP_BAR / 2);
+    lText(ctx, L.topTitle, 50, C.TOP_BAR / 2);
 
     // Score progress bar
     const barX = 270, barW = 360, barH = 24, barY = (C.TOP_BAR - barH) / 2;
@@ -612,6 +645,7 @@ class Renderer {
       ctx.restore();
     }
     ctx.save();
+    ctx.direction = 'ltr';
     ctx.font = 'bold 13px Bangers, Arial';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -620,6 +654,7 @@ class Renderer {
     ctx.fillText(`${score} / ${C.GOAL_SCORE}`, barX + barW / 2, barY + barH / 2);
     ctx.restore();
 
+    ctx.direction = 'ltr';
     ctx.font = 'bold 16px Arial';
     ctx.textAlign = 'right';
     ctx.textBaseline = 'middle';
@@ -642,7 +677,7 @@ class Renderer {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillStyle = '#6699cc';
-    ctx.fillText(isHebrew ? '↕  גרור — הזזה' : '↕  DRAG — MOVE', lx + lw / 2, C.PLAY_BOT + C.BOT_BAR / 2);
+    lText(ctx, isHebrew ? '↕  גרור — הזזה' : '↕  DRAG — MOVE', lx + lw / 2, C.PLAY_BOT + C.BOT_BAR / 2);
 
     // Divider
     ctx.strokeStyle = '#1e3a6e';
@@ -655,8 +690,9 @@ class Renderer {
     ctx.fillRect(rx, C.PLAY_BOT, rw, C.BOT_BAR);
     ctx.font = 'bold 15px Arial';
     ctx.fillStyle = '#ff88cc';
-    ctx.fillText(isHebrew ? '💕  הקש — שגר' : '💕  TAP — SHOOT', rx + rw / 2, C.PLAY_BOT + C.BOT_BAR / 2);
+    lText(ctx, isHebrew ? '💕  הקש — שגר' : '💕  TAP — SHOOT', rx + rw / 2, C.PLAY_BOT + C.BOT_BAR / 2);
 
+    ctx.direction = 'ltr';
     ctx.font = '10px Arial';
     ctx.textAlign = 'right';
     ctx.textBaseline = 'bottom';
@@ -671,53 +707,83 @@ class Renderer {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
-    // Title
+    // ── Title ─────────────────────────────────────────────────────────────
     if (!drawFlagImg(ctx, IMG.israel, C.W / 2 - 195, 90, 44))
       drawIsraelFlag(ctx, C.W / 2 - 195, 90, 44);
     ctx.font = 'bold 48px Bangers, Arial';
     ctx.fillStyle = '#ffd700';
     ctx.shadowBlur = 20; ctx.shadowColor = '#ffd700';
-    ctx.fillText(L.title, C.W / 2 + 28, 90);
+    lText(ctx, L.title, C.W / 2 + 28, 90);
     ctx.shadowBlur = 0;
 
-    // Subtitle — the goal / mission statement
+    // ── Subtitle ──────────────────────────────────────────────────────────
     ctx.font = 'bold 18px Arial';
     ctx.fillStyle = '#aaddff';
-    ctx.fillText(L.subtitle, C.W / 2, 130);
+    lText(ctx, L.subtitle, C.W / 2, 130);
 
-    // ── How-to panel ──────────────────────────────────────────────────────
-    const px = C.W / 2 - 280, pw = 560, py = 155, ph = 210;
+    // ── How-to panel (full width) ─────────────────────────────────────────
+    const px = 20, pw = C.W - 40, py = 155, ph = 210;
     drawRoundRect(ctx, px, py, pw, ph, 14, 'rgba(8,18,48,0.88)', 'rgba(80,140,255,0.5)', 2);
 
     ctx.font = 'bold 17px Bangers, Arial';
     ctx.fillStyle = '#ffd700';
-    ctx.fillText(L.howToPlay, C.W / 2, py + 22);
+    lText(ctx, L.howToPlay, C.W / 2, py + 22);
 
     ctx.font = '15px Arial';
     ctx.fillStyle = '#ccddff';
-    ctx.fillText(L.moveLine,  C.W / 2, py + 55);
-    ctx.fillText(L.shootLine, C.W / 2, py + 80);
+    lText(ctx, L.moveLine,  C.W / 2, py + 55);
+    lText(ctx, L.shootLine, C.W / 2, py + 80);
 
-    // Good emojis
-    ctx.font = 'bold 13px Arial';
-    ctx.fillStyle = '#aaffaa';
-    ctx.fillText(L.sendThese, C.W / 2 - 100, py + 115);
-    ctx.font = '22px serif';
-    ['💕','🌸','🦄','😊','⭐','🎀'].forEach((e, i) =>
-      ctx.fillText(e, C.W / 2 - 20 + i * 34, py + 116));
+    // ── Good emojis row ───────────────────────────────────────────────────
+    const goodEmojis = ['💕','🌸','🦄','😊','⭐','🎀'];
+    const badEmojis  = ['💩','😡','💣','🔴'];
 
-    // Bad emojis
-    ctx.font = 'bold 13px Arial';
-    ctx.fillStyle = '#ffaaaa';
-    ctx.fillText(L.dodgeThese, C.W / 2 - 100, py + 152);
-    ctx.font = '22px serif';
-    ['💩','😡','💣','🔴'].forEach((e, i) =>
-      ctx.fillText(e, C.W / 2 - 20 + i * 34, py + 153));
+    if (isHebrew) {
+      // RTL: label on right, emojis extending left
+      ctx.font = 'bold 13px Arial';
+      ctx.fillStyle = '#aaffaa';
+      ctx.textAlign = 'right';
+      lText(ctx, L.sendThese, C.W / 2 + pw / 2 - 20, py + 115);
+      ctx.font = '22px serif';
+      ctx.textAlign = 'center';
+      ctx.direction = 'ltr';
+      goodEmojis.forEach((e, i) =>
+        ctx.fillText(e, C.W / 2 + pw / 2 - 80 - i * 34, py + 116));
 
-    // Goal
+      ctx.font = 'bold 13px Arial';
+      ctx.fillStyle = '#ffaaaa';
+      ctx.textAlign = 'right';
+      lText(ctx, L.dodgeThese, C.W / 2 + pw / 2 - 20, py + 152);
+      ctx.font = '22px serif';
+      ctx.textAlign = 'center';
+      ctx.direction = 'ltr';
+      badEmojis.forEach((e, i) =>
+        ctx.fillText(e, C.W / 2 + pw / 2 - 80 - i * 34, py + 153));
+    } else {
+      ctx.font = 'bold 13px Arial';
+      ctx.fillStyle = '#aaffaa';
+      ctx.textAlign = 'left';
+      ctx.fillText(L.sendThese, px + 20, py + 115);
+      ctx.font = '22px serif';
+      ctx.textAlign = 'center';
+      goodEmojis.forEach((e, i) =>
+        ctx.fillText(e, px + 100 + i * 34, py + 116));
+
+      ctx.font = 'bold 13px Arial';
+      ctx.fillStyle = '#ffaaaa';
+      ctx.textAlign = 'left';
+      ctx.fillText(L.dodgeThese, px + 20, py + 152);
+      ctx.font = '22px serif';
+      ctx.textAlign = 'center';
+      badEmojis.forEach((e, i) =>
+        ctx.fillText(e, px + 100 + i * 34, py + 153));
+    }
+
+    // ── Goal ──────────────────────────────────────────────────────────────
+    ctx.textAlign = 'center';
     ctx.font = 'bold 14px Arial';
     ctx.fillStyle = '#ffffcc';
-    ctx.fillText(L.goal, C.W / 2, py + 191);
+    lText(ctx, L.goal, C.W / 2, py + 191);
 
     // ── Start button ──────────────────────────────────────────────────────
     const pulse = 0.9 + 0.1 * Math.sin(Date.now() / 400);
@@ -732,9 +798,10 @@ class Renderer {
     ctx.fillStyle = '#111';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(L.startBtn, 0, 0);
+    lText(ctx, L.startBtn, 0, 0);
     ctx.restore();
 
+    ctx.direction = 'ltr';
     ctx.font = '11px Arial';
     ctx.fillStyle = '#334466';
     ctx.textAlign = 'center';
@@ -755,26 +822,28 @@ class Renderer {
     ctx.font = 'bold 52px Bangers, Arial';
     ctx.shadowBlur = 30; ctx.shadowColor = '#ffd700';
     ctx.fillStyle = '#ffd700';
-    ctx.fillText(L.shalom, 0, 0);
+    lText(ctx, L.shalom, 0, 0);
     ctx.shadowBlur = 0;
     ctx.restore();
 
     ctx.font = 'bold 22px Arial';
     ctx.fillStyle = '#aaffcc';
-    ctx.fillText(L.peaceBrought(formatTime(elapsed)), C.W / 2, 210);
+    lText(ctx, L.peaceBrought(formatTime(elapsed)), C.W / 2, 210);
 
+    ctx.direction = 'ltr';
     ctx.font = 'bold 20px Arial';
     ctx.fillStyle = '#ffffaa';
     ctx.fillText(L.scoreLine(score), C.W / 2, 250);
 
     ctx.font = '16px Arial';
     ctx.fillStyle = '#88ccff';
-    ctx.fillText(L.alwaysWins, C.W / 2, 290);
+    lText(ctx, L.alwaysWins, C.W / 2, 290);
 
     // Both flags with dove between them
     const flagSize = 50;
     if (!drawFlagImg(ctx, IMG.israel, C.W / 2 - 130, 340, flagSize))
       drawIsraelFlag(ctx, C.W / 2 - 130, 340, flagSize);
+    ctx.direction = 'ltr';
     ctx.font = '32px serif';
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText('🕊️', C.W / 2, 340);
@@ -833,6 +902,7 @@ class ShareCard {
 
     drawRoundRect(ctx, 10, 10, w - 20, h - 20, 16, null, '#ffd700', 3);
 
+    ctx.direction = 'ltr';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
@@ -902,20 +972,23 @@ class InputHandler {
     this.canvas = canvas;
     this.game = game;
     this.keys = {};
-    this._scale = 1;
+    this._gameScale = 1;
 
     document.addEventListener('keydown', e => {
       this.keys[e.code] = true;
       if (e.code === 'Space') { e.preventDefault(); game.onAction('shoot'); }
       if (e.code === 'Space' && game.state !== 'PLAYING') game.onAction('start');
+      if (e.code === 'Escape' && game.state === 'PLAYING') game._reset();
     });
     document.addEventListener('keyup', e => { this.keys[e.code] = false; });
 
     canvas.addEventListener('touchstart', e => {
       e.preventDefault();
       for (const t of e.changedTouches) {
+        const rect = canvas.getBoundingClientRect();
+        const screenX = t.clientX - rect.left;
         const pt = this._toCanvas(t);
-        game.onTouchStart(t.identifier, pt.x, pt.y);
+        game.onTouchStart(t.identifier, screenX, pt.x, pt.y);
       }
     }, { passive: false });
 
@@ -935,16 +1008,19 @@ class InputHandler {
     }, { passive: false });
 
     canvas.addEventListener('click', e => {
+      const rect = canvas.getBoundingClientRect();
+      const screenX = e.clientX - rect.left;
       const pt = this._toCanvas(e);
-      game.onClick(pt.x, pt.y);
+      game.onClick(screenX, pt.x, pt.y);
     });
   }
 
   _toCanvas(e) {
     const rect = this.canvas.getBoundingClientRect();
+    const gs = this._gameScale || 1;
     return {
-      x: (e.clientX - rect.left) / this._scale,
-      y: (e.clientY - rect.top)  / this._scale,
+      x: (e.clientX - rect.left) / gs,
+      y: (e.clientY - rect.top)  / gs,
     };
   }
 
@@ -985,7 +1061,7 @@ class Game {
     this._lastTime = null;
     this._raf = requestAnimationFrame(ts => this._loop(ts));
 
-    scaleCanvas();
+    resizeCanvas();
   }
 
   onAction(action) {
@@ -998,32 +1074,32 @@ class Game {
     if (action === 'shoot') this._playerShoot();
   }
 
-  // Left half drag = move, right half tap = shoot
-  onTouchStart(id, x, y) {
+  // Left half of SCREEN = drag to move; right half = shoot
+  onTouchStart(id, screenX, logicalX, logicalY) {
     this.sound.resume();
     if (this.state === 'START') { this._startGame(); return; }
     if (this.state === 'WIN') {
       const s = this._btnShare, a = this._btnAgain;
-      if (x >= s.x && x <= s.x+s.w && y >= s.y && y <= s.y+s.h) ShareCard.share(this.score, this.elapsed);
-      if (x >= a.x && x <= a.x+a.w && y >= a.y && y <= a.y+a.h) this._reset();
+      if (logicalX >= s.x && logicalX <= s.x+s.w && logicalY >= s.y && logicalY <= s.y+s.h) ShareCard.share(this.score, this.elapsed);
+      if (logicalX >= a.x && logicalX <= a.x+a.w && logicalY >= a.y && logicalY <= a.y+a.h) this._reset();
       return;
     }
     if (this.state !== 'PLAYING') return;
 
-    if (x < C.W / 2) {
-      // Left side — drag to control height
+    if (screenX < this.canvas.width / 2) {
+      // Left half — drag to control height
       this._leftTouchId = id;
-      this.player.y = clamp(y, C.PLAY_TOP + this.player.h / 2, C.PLAY_BOT - this.player.h / 2);
+      this.player.y = clamp(logicalY, C.PLAY_TOP + this.player.h / 2, C.PLAY_BOT - this.player.h / 2);
     } else {
-      // Right side — shoot
+      // Right half — shoot
       this._playerShoot();
     }
   }
 
-  onTouchMove(id, x, y) {
+  onTouchMove(id, logicalX, logicalY) {
     if (this.state !== 'PLAYING') return;
     if (id === this._leftTouchId) {
-      this.player.y = clamp(y, C.PLAY_TOP + this.player.h / 2, C.PLAY_BOT - this.player.h / 2);
+      this.player.y = clamp(logicalY, C.PLAY_TOP + this.player.h / 2, C.PLAY_BOT - this.player.h / 2);
     }
   }
 
@@ -1031,24 +1107,26 @@ class Game {
     if (id === this._leftTouchId) this._leftTouchId = null;
   }
 
-  onClick(x, y) {
+  onClick(screenX, logicalX, logicalY) {
     this.sound.resume();
     if (this.state === 'START') { this._startGame(); return; }
     if (this.state === 'WIN') {
       const s = this._btnShare, a = this._btnAgain;
-      if (x >= s.x && x <= s.x+s.w && y >= s.y && y <= s.y+s.h) ShareCard.share(this.score, this.elapsed);
-      if (x >= a.x && x <= a.x+a.w && y >= a.y && y <= a.y+a.h) this._reset();
+      if (logicalX >= s.x && logicalX <= s.x+s.w && logicalY >= s.y && logicalY <= s.y+s.h) ShareCard.share(this.score, this.elapsed);
+      if (logicalX >= a.x && logicalX <= a.x+a.w && logicalY >= a.y && logicalY <= a.y+a.h) this._reset();
       return;
     }
     // Desktop click: right half = shoot
-    if (this.state === 'PLAYING' && x >= C.W / 2) this._playerShoot();
+    if (this.state === 'PLAYING' && screenX >= this.canvas.width / 2) this._playerShoot();
   }
 
   _startGame() {
     this._reset();
     this.state = 'PLAYING';
     this._lastTime = null;
-    // Try to go fullscreen on mobile — hides address bar
+    // Push history state so back button returns to start screen
+    history.pushState({ playing: true }, '');
+    // Try to go fullscreen on mobile
     const el = document.documentElement;
     const req = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen;
     if (req) req.call(el).catch(() => {});
@@ -1154,16 +1232,20 @@ class Game {
 
   _draw() {
     const ctx = this.ctx;
-    // Prevent the RTL document direction from reversing canvas text ("1000/0" bug)
-    ctx.direction = 'ltr';
-    const lp  = clamp(this.score / C.GOAL_SCORE, 0, 1);
+    // Clear full physical canvas
+    ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    // Scale all game drawing from logical 900×600 to actual canvas pixels
+    ctx.save();
+    ctx.scale(_gameScale, _gameScale);
+    ctx.direction = 'ltr'; // prevent RTL document from reversing number rendering
 
-    ctx.clearRect(0, 0, C.W, C.H);
+    const lp  = clamp(this.score / C.GOAL_SCORE, 0, 1);
 
     if (this.state === 'START') {
       this.renderer.drawBackground(0);
       this.renderer.drawStartScreen(ctx);
       this.particles.draw(ctx);
+      ctx.restore();
       return;
     }
 
@@ -1184,6 +1266,8 @@ class Game {
     if (this.state === 'WIN') {
       this.renderer.drawWinScreen(ctx, this.score, this.elapsed, this._btnShare, this._btnAgain);
     }
+
+    ctx.restore();
   }
 
   _loop(ts) {
@@ -1196,25 +1280,18 @@ class Game {
   }
 }
 
-// ─── Responsive scaling ───────────────────────────────────────────────────────
-const container = document.getElementById('container');
-function scaleCanvas() {
-  // Use visualViewport when available — it excludes the browser address bar
-  const vp = window.visualViewport || window;
-  const vw = vp.width  || window.innerWidth;
-  const vh = vp.height || window.innerHeight;
-  const scale = Math.min(vw / C.W, vh / C.H);
-  container.style.transform = `scale(${scale})`;
-  if (window._game && window._game.input) window._game.input._scale = scale;
-}
-window.addEventListener('resize', scaleCanvas);
-if (window.visualViewport) window.visualViewport.addEventListener('resize', scaleCanvas);
+// ─── Back button → return to start screen ────────────────────────────────────
+window.addEventListener('popstate', () => {
+  if (window._game && window._game.state === 'PLAYING') {
+    window._game._reset();
+  }
+});
 
 // ─── Bootstrap ────────────────────────────────────────────────────────────────
 window.onload = () => {
+  resizeCanvas();
   const canvas = document.getElementById('gameCanvas');
   window._game = new Game(canvas);
-  scaleCanvas();
 };
 </script>
 </body>
