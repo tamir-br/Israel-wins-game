@@ -175,19 +175,34 @@ function resizeCanvas() {
   const vp = window.visualViewport || window;
   const vw = Math.round(vp.width  || window.innerWidth);
   const vh = Math.round(vp.height || window.innerHeight);
-  // Contain: fit the full 900×600 game in the viewport, no scrolling
-  _gameScale = Math.min(vw / BASE_W, vh / BASE_H);
-  _offsetX   = Math.round((vw - BASE_W * _gameScale) / 2);
-  _offsetY   = Math.round((vh - BASE_H * _gameScale) / 2);
+  // Fill height exactly — scale to vh, extend logical width to fill vw (no bars, no scroll)
+  _gameScale = vh / BASE_H;
+  C.W = Math.round(vw / _gameScale);
+  C.IRAN_ZONE_X = C.W - C.IRAN_ZONE_W;
+  _offsetX = 0;
+  _offsetY = 0;
   const canvas = document.getElementById('gameCanvas');
   canvas.width  = vw;
   canvas.height = vh;
   canvas.style.width  = vw + 'px';
   canvas.style.height = vh + 'px';
-  if (window._game && window._game.input) {
-    window._game.input._gameScale = _gameScale;
-    window._game.input._offsetX   = _offsetX;
-    window._game.input._offsetY   = _offsetY;
+  if (window._game) {
+    if (window._game.input) {
+      window._game.input._gameScale = _gameScale;
+      window._game.input._offsetX   = 0;
+      window._game.input._offsetY   = 0;
+    }
+    const g = window._game;
+    g._btnShare     = { x: C.W/2 - 220, y: 400, w: 200, h: 46 };
+    g._btnAgain     = { x: C.W/2 + 20,  y: 400, w: 200, h: 46 };
+    g._btnStart     = { x: C.W/2 - 130, y: 398, w: 260, h: 60 };
+    g._btnMenuShare = { x: C.W/2 - 100, y: 475, w: 200, h: 40 };
+    if (g.renderer) {
+      g.renderer.stars = Array.from({length: 60}, () => ({
+        x: rand(0, C.W), y: rand(C.PLAY_TOP, C.PLAY_BOT),
+        r: rand(0.5, 2), a: rand(0.3, 1)
+      }));
+    }
   }
 }
 window.addEventListener('resize', resizeCanvas);
@@ -630,8 +645,9 @@ class Renderer {
     ctx.fillStyle = '#ffd700';
     lText(ctx, L.topTitle, 50, C.TOP_BAR / 2);
 
-    // Score progress bar
-    const barX = 270, barW = 360, barH = 24, barY = (C.TOP_BAR - barH) / 2;
+    // Score progress bar (adaptive width)
+    const barW = Math.min(360, C.W - 360), barH = 24, barY = (C.TOP_BAR - barH) / 2;
+    const barX = C.W / 2 - barW / 2;
     const lp = clamp(score / C.GOAL_SCORE, 0, 1);
     drawRoundRect(ctx, barX, barY, barW, barH, 12, 'rgba(0,0,0,0.4)', 'rgba(100,160,255,0.35)', 1);
     if (lp > 0) {
