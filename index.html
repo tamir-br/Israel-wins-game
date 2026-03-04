@@ -103,8 +103,8 @@ const L = isHebrew ? {
   howToPlay:    'איך לשחק',
   moveLine:     'גרור צד שמאל — לשלוט בגובה',
   shootLine:    'הקש בצד ימין — לשגר אהבה לעם האירני',
-  sendThese:    ':שגר אלה',
-  dodgeThese:   ':התחמק מאלה',
+  sendThese:    'שגר את אלה:',
+  dodgeThese:   'התחמק מאלה:',
   goal:         'מלא את סרגל ❤️ ל-1000 והבא שלום!',
   startBtn:     '▶ לחץ להתחיל',
   upBtn:        '↑',
@@ -195,8 +195,8 @@ function resizeCanvas() {
     const g = window._game;
     g._btnShare     = { x: C.W/2 - 255, y: 415, w: 240, h: 60 };
     g._btnAgain     = { x: C.W/2 + 15,  y: 415, w: 240, h: 60 };
-    g._btnStart     = { x: C.W/2 - 150, y: 400, w: 300, h: 70 };
-    g._btnMenuShare = { x: C.W/2 - 100, y: 475, w: 200, h: 40 };
+    g._btnStart     = { x: C.W/2 - 150, y: 415, w: 300, h: 70 };
+    g._btnMenuShare = { x: C.W/2 - 100, y: 500, w: 200, h: 40 };
     if (g.renderer) {
       g.renderer.stars = Array.from({length: 60}, () => ({
         x: rand(0, C.W), y: rand(C.PLAY_TOP, C.PLAY_BOT),
@@ -530,12 +530,6 @@ class Renderer {
     ctx.setLineDash([]);
 
     ctx.save();
-    ctx.font = 'bold 13px Arial';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillStyle = 'rgba(120,160,220,0.5)';
-    lText(ctx, L.battlefield, (C.ISRAEL_ZONE_W + C.IRAN_ZONE_X) / 2, C.PLAY_TOP + 20);
-
     const midX = (C.ISRAEL_ZONE_W + C.IRAN_ZONE_X) / 2;
     const pulse2 = 0.5 + 0.5 * Math.sin(Date.now() / 500);
     ctx.globalAlpha = 0.3 + 0.3 * pulse2;
@@ -598,14 +592,18 @@ class Renderer {
     ctx.restore();
 
     const enemyX = C.IRAN_ZONE_X + C.IRAN_ZONE_W / 2;
-    if (!drawFlagImg(ctx, IMG.iran, enemyX, enemyY, 80))
+    const imgH = 80, imgW = IMG.iran && IMG.iran.naturalWidth
+      ? imgH * (IMG.iran.naturalWidth / IMG.iran.naturalHeight) : imgH;
+    if (IMG.iran && IMG.iran.complete && IMG.iran.naturalWidth) {
+      ctx.drawImage(IMG.iran, enemyX - imgW / 2, enemyY - imgH / 2, imgW, imgH);
+    } else {
       drawIranFlag(ctx, enemyX, enemyY, 70);
+    }
     if (score >= 750) {
       ctx.save();
       ctx.strokeStyle = `rgba(255,0,0,${0.6 + 0.4 * Math.sin(Date.now()/150)})`;
       ctx.lineWidth = 5;
-      ctx.beginPath();
-      ctx.arc(enemyX, enemyY, 48, 0, Math.PI * 2);
+      drawRoundRect(ctx, enemyX - imgW / 2 - 6, enemyY - imgH / 2 - 6, imgW + 12, imgH + 12, 8, null, null, 0);
       ctx.stroke();
       ctx.restore();
     }
@@ -751,59 +749,59 @@ class Renderer {
     lText(ctx, L.subtitle, C.W / 2, 126);
 
     // ── How-to panel (full width, two columns) ────────────────────────────
-    const px = 20, pw = C.W - 40, py = 148, ph = 240;
+    const px = 20, pw = C.W - 40, py = 148, ph = 280;
     drawRoundRect(ctx, px, py, pw, ph, 14, 'rgba(8,18,48,0.88)', 'rgba(80,140,255,0.5)', 2);
 
     // Right column: instructions (C.W*3/4)
     const rCol = C.W * 3 / 4;
-    ctx.font = 'bold 22px Bangers, Arial';
+    ctx.font = 'bold 33px Bangers, Arial';
     ctx.fillStyle = '#ffd700';
-    lText(ctx, L.howToPlay, rCol, py + 22);
+    lText(ctx, L.howToPlay, rCol, py + 28);
 
-    ctx.font = '19px Arial';
+    ctx.font = '29px Arial';
     ctx.fillStyle = '#ccddff';
-    lText(ctx, L.moveLine,  rCol, py + 60);
-    lText(ctx, L.shootLine, rCol, py + 90);
+    lText(ctx, L.moveLine,  rCol, py + 75);
+    lText(ctx, L.shootLine, rCol, py + 115);
 
-    ctx.font = 'bold 17px Arial';
+    ctx.font = 'bold 26px Arial';
     ctx.fillStyle = '#ffffcc';
-    lText(ctx, L.goal, rCol, py + 125);
+    lText(ctx, L.goal, rCol, py + 160);
 
     // Left column: emojis (C.W/4)
     const lCol = C.W / 4;
     const goodEmojis = ['💕','🌸','🦄','😊','⭐','🎀'];
     const badEmojis  = ['💩','😡','💣','🔴'];
 
-    ctx.font = 'bold 17px Arial';
+    ctx.font = 'bold 26px Arial';
     ctx.fillStyle = '#aaffaa';
     ctx.textAlign = 'center';
     lText(ctx, L.sendThese, lCol, py + 35);
-    ctx.font = '26px serif';
+    ctx.font = '39px serif';
     ctx.direction = 'ltr';
     const gList = isHebrew ? [...goodEmojis].reverse() : goodEmojis;
-    const gStart = lCol - (gList.length - 1) * 18;
-    gList.forEach((e, i) => ctx.fillText(e, gStart + i * 36, py + 75));
+    const gStart = lCol - (gList.length - 1) * 22;
+    gList.forEach((e, i) => ctx.fillText(e, gStart + i * 44, py + 90));
 
-    ctx.font = 'bold 17px Arial';
+    ctx.font = 'bold 26px Arial';
     ctx.fillStyle = '#ffaaaa';
     ctx.textAlign = 'center';
-    lText(ctx, L.dodgeThese, lCol, py + 120);
-    ctx.font = '26px serif';
+    lText(ctx, L.dodgeThese, lCol, py + 145);
+    ctx.font = '39px serif';
     ctx.direction = 'ltr';
     const bList = isHebrew ? [...badEmojis].reverse() : badEmojis;
-    const bStart = lCol - (bList.length - 1) * 22;
-    bList.forEach((e, i) => ctx.fillText(e, bStart + i * 44, py + 158));
+    const bStart = lCol - (bList.length - 1) * 28;
+    bList.forEach((e, i) => ctx.fillText(e, bStart + i * 56, py + 200));
 
     // ── Start button (pulsing) ────────────────────────────────────────────
     const pulse = 0.9 + 0.1 * Math.sin(Date.now() / 400);
     ctx.save();
-    ctx.translate(C.W / 2, 435);
+    ctx.translate(C.W / 2, 450);
     ctx.scale(pulse, pulse);
     const btnGrad = ctx.createLinearGradient(-150, -35, -150, 35);
     btnGrad.addColorStop(0, '#fffde0');
     btnGrad.addColorStop(1, '#ffd700');
     drawRoundRect(ctx, -150, -35, 300, 70, 14, btnGrad, '#fff8cc', 2);
-    ctx.font = 'bold 28px Bangers, Arial';
+    ctx.font = 'bold 42px Bangers, Arial';
     ctx.fillStyle = '#111';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -812,7 +810,7 @@ class Renderer {
 
     // ── Share game button ─────────────────────────────────────────────────
     drawButton(ctx, isHebrew ? '📤 שתף את המשחק' : '📤 Share Game',
-      C.W / 2 - 100, 475, 200, 40, false);
+      C.W / 2 - 100, 500, 200, 40, false);
 
     ctx.direction = 'ltr';
     ctx.font = '11px Arial';
@@ -966,8 +964,8 @@ class ShareCard {
   static shareResult(score, elapsed) {
     const url = 'https://tinyurl.com/Israelwins';
     const text = isHebrew
-      ? `שיחקתי ישראל מנצחת — הבאתי שלום תוך ${formatTime(elapsed)}!\nניקוד: ${score.toLocaleString()} נק׳ 🕊️\nשחקו גם אתם:`
-      : `I played Israel Wins — brought PEACE in ${formatTime(elapsed)}!\nScore: ${score.toLocaleString()} pts 🕊️\nPlay too:`;
+      ? `שיחקתי ישראל מנצחת — הבאתי שלום תוך ${formatTime(elapsed)}! 🕊️\nשחקו גם אתם:`
+      : `I played Israel Wins — brought PEACE in ${formatTime(elapsed)}! 🕊️\nPlay too:`;
     if (navigator.share) {
       navigator.share({ title: L.shareTitle, text, url }).catch(() => {
         navigator.clipboard && navigator.clipboard.writeText(text + '\n' + url).catch(() => {});
@@ -1092,8 +1090,8 @@ class Game {
 
     this._btnShare     = { x: C.W/2 - 255, y: 415, w: 240, h: 60 };
     this._btnAgain     = { x: C.W/2 + 15,  y: 415, w: 240, h: 60 };
-    this._btnStart     = { x: C.W/2 - 150, y: 400, w: 300, h: 70 };
-    this._btnMenuShare = { x: C.W/2 - 100, y: 475, w: 200, h: 40 };
+    this._btnStart     = { x: C.W/2 - 150, y: 415, w: 300, h: 70 };
+    this._btnMenuShare = { x: C.W/2 - 100, y: 500, w: 200, h: 40 };
 
     this._leftTouchId = null;
     this._lastTime = null;
