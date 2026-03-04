@@ -99,13 +99,13 @@ const L = isHebrew ? {
   yourBase:     '🏠 הבסיס שלך',
   israelSub:    '(ישראל)',
   sendLove:     '💕 שגר אהבה!',
-  iranSub:      '(איראן)',
+  iranSub:      '(העם האירני)',
   howToPlay:    'איך לשחק',
   moveLine:     'גרור צד שמאל — לשלוט בגובה',
   shootLine:    'הקש בצד ימין — לשגר אהבה לעם האירני',
   sendThese:    ':שגר אלה',
   dodgeThese:   ':התחמק מאלה',
-  goal:         '!מלא את סרגל ❤️ ל-1000 והבא שלום',
+  goal:         'מלא את סרגל ❤️ ל-1000 והבא שלום!',
   startBtn:     '▶ לחץ להתחיל',
   upBtn:        '↑',
   shootBtn:     '💕 שגר',
@@ -167,24 +167,27 @@ const C = {
   IRAN_PROJS:   ['💩','😡','💣','🔴'],
 };
 
-// ─── Responsive scaling (fills full viewport width) ──────────────────────────
+// ─── Responsive scaling (contain: full viewport canvas, game centered) ───────
 const BASE_W = C.W, BASE_H = C.H;
-let _gameScale = 1;
+let _gameScale = 1, _offsetX = 0, _offsetY = 0;
 
 function resizeCanvas() {
   const vp = window.visualViewport || window;
   const vw = Math.round(vp.width  || window.innerWidth);
   const vh = Math.round(vp.height || window.innerHeight);
-  _gameScale = vw / BASE_W;          // fill full width, uniform scale
-  const cw = vw;
-  const ch = Math.round(BASE_H * _gameScale);
+  // Contain: fit the full 900×600 game in the viewport, no scrolling
+  _gameScale = Math.min(vw / BASE_W, vh / BASE_H);
+  _offsetX   = Math.round((vw - BASE_W * _gameScale) / 2);
+  _offsetY   = Math.round((vh - BASE_H * _gameScale) / 2);
   const canvas = document.getElementById('gameCanvas');
-  canvas.width  = cw;
-  canvas.height = ch;
-  canvas.style.width  = cw + 'px';
-  canvas.style.height = ch + 'px';
+  canvas.width  = vw;
+  canvas.height = vh;
+  canvas.style.width  = vw + 'px';
+  canvas.style.height = vh + 'px';
   if (window._game && window._game.input) {
     window._game.input._gameScale = _gameScale;
+    window._game.input._offsetX   = _offsetX;
+    window._game.input._offsetY   = _offsetY;
   }
 }
 window.addEventListener('resize', resizeCanvas);
@@ -570,7 +573,7 @@ class Renderer {
     ctx.textBaseline = 'middle';
     ctx.fillStyle = '#ff8844';
     ctx.shadowBlur = 10; ctx.shadowColor = '#ff4400';
-    lText(ctx, isHebrew ? 'איראן' : 'IRAN', C.IRAN_ZONE_X + C.IRAN_ZONE_W / 2, C.PLAY_TOP + 38);
+    lText(ctx, isHebrew ? 'העם האירני' : 'IRAN', C.IRAN_ZONE_X + C.IRAN_ZONE_W / 2, C.PLAY_TOP + 38);
     ctx.shadowBlur = 0;
     ctx.font = '13px Arial';
     ctx.fillStyle = `rgb(${r},${g},${b})`;
@@ -708,84 +711,65 @@ class Renderer {
     ctx.textBaseline = 'middle';
 
     // ── Title ─────────────────────────────────────────────────────────────
-    if (!drawFlagImg(ctx, IMG.israel, C.W / 2 - 195, 90, 44))
-      drawIsraelFlag(ctx, C.W / 2 - 195, 90, 44);
+    if (!drawFlagImg(ctx, IMG.israel, C.W / 2 - 195, 88, 44))
+      drawIsraelFlag(ctx, C.W / 2 - 195, 88, 44);
     ctx.font = 'bold 48px Bangers, Arial';
     ctx.fillStyle = '#ffd700';
     ctx.shadowBlur = 20; ctx.shadowColor = '#ffd700';
-    lText(ctx, L.title, C.W / 2 + 28, 90);
+    lText(ctx, L.title, C.W / 2 + 28, 88);
     ctx.shadowBlur = 0;
 
     // ── Subtitle ──────────────────────────────────────────────────────────
-    ctx.font = 'bold 18px Arial';
+    ctx.font = 'bold 17px Arial';
     ctx.fillStyle = '#aaddff';
-    lText(ctx, L.subtitle, C.W / 2, 130);
+    lText(ctx, L.subtitle, C.W / 2, 126);
 
     // ── How-to panel (full width) ─────────────────────────────────────────
-    const px = 20, pw = C.W - 40, py = 155, ph = 210;
+    const px = 20, pw = C.W - 40, py = 148, ph = 222;
     drawRoundRect(ctx, px, py, pw, ph, 14, 'rgba(8,18,48,0.88)', 'rgba(80,140,255,0.5)', 2);
 
     ctx.font = 'bold 17px Bangers, Arial';
     ctx.fillStyle = '#ffd700';
-    lText(ctx, L.howToPlay, C.W / 2, py + 22);
+    lText(ctx, L.howToPlay, C.W / 2, py + 20);
 
     ctx.font = '15px Arial';
     ctx.fillStyle = '#ccddff';
-    lText(ctx, L.moveLine,  C.W / 2, py + 55);
-    lText(ctx, L.shootLine, C.W / 2, py + 80);
+    lText(ctx, L.moveLine,  C.W / 2, py + 50);
+    lText(ctx, L.shootLine, C.W / 2, py + 73);
 
-    // ── Good emojis row ───────────────────────────────────────────────────
+    // ── Good emojis: label above, emojis below (centered, no overlap) ─────
     const goodEmojis = ['💕','🌸','🦄','😊','⭐','🎀'];
     const badEmojis  = ['💩','😡','💣','🔴'];
 
-    if (isHebrew) {
-      // RTL: label on right, emojis extending left
-      ctx.font = 'bold 13px Arial';
-      ctx.fillStyle = '#aaffaa';
-      ctx.textAlign = 'right';
-      lText(ctx, L.sendThese, C.W / 2 + pw / 2 - 20, py + 115);
-      ctx.font = '22px serif';
-      ctx.textAlign = 'center';
-      ctx.direction = 'ltr';
-      goodEmojis.forEach((e, i) =>
-        ctx.fillText(e, C.W / 2 + pw / 2 - 80 - i * 34, py + 116));
+    ctx.font = 'bold 13px Arial';
+    ctx.fillStyle = '#aaffaa';
+    ctx.textAlign = 'center';
+    lText(ctx, L.sendThese, C.W / 2, py + 102);
+    ctx.font = '22px serif';
+    ctx.direction = 'ltr';
+    // Emojis centered — for Hebrew (RTL), reverse order so they read right-to-left
+    const gList = isHebrew ? [...goodEmojis].reverse() : goodEmojis;
+    const gStart = C.W / 2 - (gList.length - 1) * 17;
+    gList.forEach((e, i) => ctx.fillText(e, gStart + i * 34, py + 124));
 
-      ctx.font = 'bold 13px Arial';
-      ctx.fillStyle = '#ffaaaa';
-      ctx.textAlign = 'right';
-      lText(ctx, L.dodgeThese, C.W / 2 + pw / 2 - 20, py + 152);
-      ctx.font = '22px serif';
-      ctx.textAlign = 'center';
-      ctx.direction = 'ltr';
-      badEmojis.forEach((e, i) =>
-        ctx.fillText(e, C.W / 2 + pw / 2 - 80 - i * 34, py + 153));
-    } else {
-      ctx.font = 'bold 13px Arial';
-      ctx.fillStyle = '#aaffaa';
-      ctx.textAlign = 'left';
-      ctx.fillText(L.sendThese, px + 20, py + 115);
-      ctx.font = '22px serif';
-      ctx.textAlign = 'center';
-      goodEmojis.forEach((e, i) =>
-        ctx.fillText(e, px + 100 + i * 34, py + 116));
-
-      ctx.font = 'bold 13px Arial';
-      ctx.fillStyle = '#ffaaaa';
-      ctx.textAlign = 'left';
-      ctx.fillText(L.dodgeThese, px + 20, py + 152);
-      ctx.font = '22px serif';
-      ctx.textAlign = 'center';
-      badEmojis.forEach((e, i) =>
-        ctx.fillText(e, px + 100 + i * 34, py + 153));
-    }
+    // ── Bad emojis: same stacked layout ───────────────────────────────────
+    ctx.font = 'bold 13px Arial';
+    ctx.fillStyle = '#ffaaaa';
+    ctx.textAlign = 'center';
+    lText(ctx, L.dodgeThese, C.W / 2, py + 154);
+    ctx.font = '22px serif';
+    ctx.direction = 'ltr';
+    const bList = isHebrew ? [...badEmojis].reverse() : badEmojis;
+    const bStart = C.W / 2 - (bList.length - 1) * 17;
+    bList.forEach((e, i) => ctx.fillText(e, bStart + i * 34, py + 176));
 
     // ── Goal ──────────────────────────────────────────────────────────────
     ctx.textAlign = 'center';
     ctx.font = 'bold 14px Arial';
     ctx.fillStyle = '#ffffcc';
-    lText(ctx, L.goal, C.W / 2, py + 191);
+    lText(ctx, L.goal, C.W / 2, py + 208);
 
-    // ── Start button ──────────────────────────────────────────────────────
+    // ── Start button (pulsing) ────────────────────────────────────────────
     const pulse = 0.9 + 0.1 * Math.sin(Date.now() / 400);
     ctx.save();
     ctx.translate(C.W / 2, 428);
@@ -801,10 +785,15 @@ class Renderer {
     lText(ctx, L.startBtn, 0, 0);
     ctx.restore();
 
+    // ── Share game button ─────────────────────────────────────────────────
+    drawButton(ctx, isHebrew ? '📤 שתף את המשחק' : '📤 Share Game',
+      C.W / 2 - 100, 475, 200, 40, false);
+
     ctx.direction = 'ltr';
     ctx.font = '11px Arial';
     ctx.fillStyle = '#334466';
     ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
     ctx.fillText('© tamir.devlab@gmail.com  2016', C.W / 2, C.H - 16);
   }
 
@@ -958,6 +947,18 @@ class ShareCard {
     });
   }
 
+  static shareGame() {
+    const url = window.location.href;
+    const text = isHebrew
+      ? 'שחקו ישראל מנצחת — שגר אהבה לעם האירני!'
+      : 'Play Israel Wins — Send love to the Iranian people!';
+    if (navigator.share) {
+      navigator.share({ title: L.shareTitle, text, url }).catch(() => {});
+    } else {
+      navigator.clipboard && navigator.clipboard.writeText(url).catch(() => {});
+    }
+  }
+
   static _download(canvas) {
     const a = document.createElement('a');
     a.download = 'israel-wins.png';
@@ -973,6 +974,8 @@ class InputHandler {
     this.game = game;
     this.keys = {};
     this._gameScale = 1;
+    this._offsetX   = 0;
+    this._offsetY   = 0;
 
     document.addEventListener('keydown', e => {
       this.keys[e.code] = true;
@@ -1018,9 +1021,11 @@ class InputHandler {
   _toCanvas(e) {
     const rect = this.canvas.getBoundingClientRect();
     const gs = this._gameScale || 1;
+    const ox = this._offsetX || 0;
+    const oy = this._offsetY || 0;
     return {
-      x: (e.clientX - rect.left) / gs,
-      y: (e.clientY - rect.top)  / gs,
+      x: (e.clientX - rect.left - ox) / gs,
+      y: (e.clientY - rect.top  - oy) / gs,
     };
   }
 
@@ -1054,8 +1059,10 @@ class Game {
     this.unlockedTypes     = 2;
     this.iranEnemy = { y: (C.PLAY_TOP + C.PLAY_BOT) / 2, vy: 1 };
 
-    this._btnShare = { x: C.W/2 - 220, y: 400, w: 200, h: 46 };
-    this._btnAgain = { x: C.W/2 + 20,  y: 400, w: 200, h: 46 };
+    this._btnShare     = { x: C.W/2 - 220, y: 400, w: 200, h: 46 };
+    this._btnAgain     = { x: C.W/2 + 20,  y: 400, w: 200, h: 46 };
+    this._btnStart     = { x: C.W/2 - 130, y: 398, w: 260, h: 60 };
+    this._btnMenuShare = { x: C.W/2 - 100, y: 475, w: 200, h: 40 };
 
     this._leftTouchId = null;
     this._lastTime = null;
@@ -1077,7 +1084,14 @@ class Game {
   // Left half of SCREEN = drag to move; right half = shoot
   onTouchStart(id, screenX, logicalX, logicalY) {
     this.sound.resume();
-    if (this.state === 'START') { this._startGame(); return; }
+    if (this.state === 'START') {
+      const bs = this._btnStart, ms = this._btnMenuShare;
+      if (logicalX >= bs.x && logicalX <= bs.x+bs.w && logicalY >= bs.y && logicalY <= bs.y+bs.h)
+        this._startGame();
+      else if (logicalX >= ms.x && logicalX <= ms.x+ms.w && logicalY >= ms.y && logicalY <= ms.y+ms.h)
+        ShareCard.shareGame();
+      return;
+    }
     if (this.state === 'WIN') {
       const s = this._btnShare, a = this._btnAgain;
       if (logicalX >= s.x && logicalX <= s.x+s.w && logicalY >= s.y && logicalY <= s.y+s.h) ShareCard.share(this.score, this.elapsed);
@@ -1109,7 +1123,14 @@ class Game {
 
   onClick(screenX, logicalX, logicalY) {
     this.sound.resume();
-    if (this.state === 'START') { this._startGame(); return; }
+    if (this.state === 'START') {
+      const bs = this._btnStart, ms = this._btnMenuShare;
+      if (logicalX >= bs.x && logicalX <= bs.x+bs.w && logicalY >= bs.y && logicalY <= bs.y+bs.h)
+        this._startGame();
+      else if (logicalX >= ms.x && logicalX <= ms.x+ms.w && logicalY >= ms.y && logicalY <= ms.y+ms.h)
+        ShareCard.shareGame();
+      return;
+    }
     if (this.state === 'WIN') {
       const s = this._btnShare, a = this._btnAgain;
       if (logicalX >= s.x && logicalX <= s.x+s.w && logicalY >= s.y && logicalY <= s.y+s.h) ShareCard.share(this.score, this.elapsed);
@@ -1232,10 +1253,12 @@ class Game {
 
   _draw() {
     const ctx = this.ctx;
-    // Clear full physical canvas
-    ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-    // Scale all game drawing from logical 900×600 to actual canvas pixels
+    // Fill full viewport (covers letterbox bars outside game area)
+    ctx.fillStyle = '#0a0a1a';
+    ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    // Transform to logical 900×600 game space (centered, no distortion)
     ctx.save();
+    ctx.translate(_offsetX, _offsetY);
     ctx.scale(_gameScale, _gameScale);
     ctx.direction = 'ltr'; // prevent RTL document from reversing number rendering
 
