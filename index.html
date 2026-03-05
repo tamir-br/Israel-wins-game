@@ -569,6 +569,14 @@ class Renderer {
     ctx.textBaseline = 'top';
     lText(ctx, L.yourBase, C.ISRAEL_ZONE_W / 2, C.PLAY_TOP + 58);
     ctx.restore();
+
+    const flagCX = C.ISRAEL_ZONE_W / 2;
+    const flagCY = (C.PLAY_TOP + C.PLAY_BOT) / 2;
+    ctx.save();
+    ctx.globalAlpha = 0.25;
+    if (!drawFlagImg(ctx, IMG.israel, flagCX, flagCY, 100))
+      drawIsraelFlag(ctx, flagCX, flagCY, 100);
+    ctx.restore();
   }
 
   drawIranZone(ctx, lovePercent, enemyY, score) {
@@ -600,7 +608,7 @@ class Renderer {
     ctx.restore();
 
     const enemyX = C.IRAN_ZONE_X + C.IRAN_ZONE_W / 2;
-    const imgH = 80, imgW = IMG.iran && IMG.iran.naturalWidth
+    const imgH = 112, imgW = IMG.iran && IMG.iran.naturalWidth
       ? imgH * (IMG.iran.naturalWidth / IMG.iran.naturalHeight) : imgH;
     if (IMG.iran && IMG.iran.complete && IMG.iran.naturalWidth) {
       ctx.drawImage(IMG.iran, enemyX - imgW / 2, enemyY - imgH / 2, imgW, imgH);
