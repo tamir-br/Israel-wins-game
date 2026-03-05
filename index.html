@@ -167,8 +167,8 @@ const C = {
   SCORE_HIT:  50,
   SCORE_HURT: 30,
   DIFFICULTY_INTERVAL: 10000,
-  ISRAEL_ZONE_X: 0, ISRAEL_ZONE_W: 300,
-  IRAN_ZONE_X: 600,  IRAN_ZONE_W: 300,
+  ISRAEL_ZONE_X: 60, ISRAEL_ZONE_W: 300,
+  IRAN_ZONE_X: 540,  IRAN_ZONE_W: 300,
   PLAYER_W: 70, PLAYER_H: 70,
   PROJ_SIZE: 32,
   ISRAEL_PROJS: ['💕','🌸','🦄','🐾','😊','🌈','⭐','🎀'],
@@ -186,7 +186,7 @@ function resizeCanvas() {
   // Fill height exactly — scale to vh, extend logical width to fill vw (no bars, no scroll)
   _gameScale = vh / BASE_H;
   C.W = Math.round(vw / _gameScale);
-  C.IRAN_ZONE_X = C.W - C.IRAN_ZONE_W;
+  C.IRAN_ZONE_X = C.W - C.IRAN_ZONE_W - 60;
   _offsetX = 0;
   _offsetY = 0;
   const canvas = document.getElementById('gameCanvas');
@@ -457,7 +457,7 @@ class IranProjectile extends Projectile {
 class Player {
   constructor() { this.reset(); }
   reset() {
-    this.x = C.ISRAEL_ZONE_W / 2;
+    this.x = C.ISRAEL_ZONE_X + C.ISRAEL_ZONE_W / 2;
     this.y = C.H / 2;
     this.w = C.PLAYER_W;
     this.h = C.PLAYER_H;
@@ -469,7 +469,7 @@ class Player {
   update(dt, input) {
     if (input.up)   this.y -= this.speed * dt / 16;
     if (input.down) this.y += this.speed * dt / 16;
-    this.x = C.ISRAEL_ZONE_W / 2;
+    this.x = C.ISRAEL_ZONE_X + C.ISRAEL_ZONE_W / 2;
     this.y = clamp(this.y, C.PLAY_TOP + this.h/2, C.PLAY_BOT - this.h/2);
     if (this.shootCooldown > 0) this.shootCooldown -= dt;
     if (this.hurtFlash > 0)    this.hurtFlash -= dt;
@@ -518,18 +518,19 @@ class Renderer {
     ctx.globalAlpha = 1;
 
     ctx.fillStyle = 'rgba(30,120,40,0.55)';
-    ctx.fillRect(0, C.PLAY_BOT - 36, C.ISRAEL_ZONE_W, 36);
+    ctx.fillRect(C.ISRAEL_ZONE_X, C.PLAY_BOT - 36, C.ISRAEL_ZONE_W, 36);
     ctx.fillStyle = 'rgba(160,100,30,0.55)';
     ctx.fillRect(C.IRAN_ZONE_X, C.PLAY_BOT - 36, C.IRAN_ZONE_W, 36);
     ctx.fillStyle = 'rgba(10,20,40,0.4)';
-    ctx.fillRect(C.ISRAEL_ZONE_W, C.PLAY_BOT - 36, C.IRAN_ZONE_X - C.ISRAEL_ZONE_W, 36);
+    const israelEnd = C.ISRAEL_ZONE_X + C.ISRAEL_ZONE_W;
+    ctx.fillRect(israelEnd, C.PLAY_BOT - 36, C.IRAN_ZONE_X - israelEnd, 36);
 
     ctx.strokeStyle = 'rgba(60,120,200,0.4)';
     ctx.lineWidth = 1;
     ctx.setLineDash([6, 4]);
     ctx.beginPath();
-    ctx.moveTo(C.ISRAEL_ZONE_W, C.PLAY_TOP);
-    ctx.lineTo(C.ISRAEL_ZONE_W, C.PLAY_BOT);
+    ctx.moveTo(israelEnd, C.PLAY_TOP);
+    ctx.lineTo(israelEnd, C.PLAY_BOT);
     ctx.stroke();
     ctx.beginPath();
     ctx.moveTo(C.IRAN_ZONE_X, C.PLAY_TOP);
@@ -538,7 +539,7 @@ class Renderer {
     ctx.setLineDash([]);
 
     ctx.save();
-    const midX = (C.ISRAEL_ZONE_W + C.IRAN_ZONE_X) / 2;
+    const midX = (israelEnd + C.IRAN_ZONE_X) / 2;
     const pulse2 = 0.5 + 0.5 * Math.sin(Date.now() / 500);
     ctx.globalAlpha = 0.3 + 0.3 * pulse2;
     ctx.font = 'bold 20px Arial';
@@ -552,7 +553,7 @@ class Renderer {
     ctx.save();
     ctx.shadowBlur = 30;
     ctx.shadowColor = 'rgba(0,160,255,0.5)';
-    drawRoundRect(ctx, 10, C.PLAY_TOP + 10, C.ISRAEL_ZONE_W - 20, C.PLAY_BOT - C.PLAY_TOP - 20,
+    drawRoundRect(ctx, C.ISRAEL_ZONE_X + 10, C.PLAY_TOP + 10, C.ISRAEL_ZONE_W - 20, C.PLAY_BOT - C.PLAY_TOP - 20,
       12, 'rgba(0,80,160,0.30)', '#1e90ff', 2);
     ctx.restore();
 
@@ -562,12 +563,12 @@ class Renderer {
     ctx.textBaseline = 'middle';
     ctx.fillStyle = '#ffffff';
     ctx.shadowBlur = 10; ctx.shadowColor = '#004488';
-    lText(ctx, isHebrew ? 'ישראל' : 'ISRAEL', C.ISRAEL_ZONE_W / 2, C.PLAY_TOP + 38);
+    lText(ctx, isHebrew ? 'ישראל' : 'ISRAEL', C.ISRAEL_ZONE_X + C.ISRAEL_ZONE_W / 2, C.PLAY_TOP + 38);
     ctx.shadowBlur = 0;
     ctx.font = '13px Arial';
     ctx.fillStyle = '#88ccff';
     ctx.textBaseline = 'top';
-    lText(ctx, L.yourBase, C.ISRAEL_ZONE_W / 2, C.PLAY_TOP + 58);
+    lText(ctx, L.yourBase, C.ISRAEL_ZONE_X + C.ISRAEL_ZONE_W / 2, C.PLAY_TOP + 58);
     ctx.restore();
 
   }
