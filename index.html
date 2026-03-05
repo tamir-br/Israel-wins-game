@@ -101,25 +101,25 @@ if (isHebrew) {
 }
 
 const L = isHebrew ? {
-  title:        'ישראל מנצחת!',
-  subtitle:     'שגר אהבה לעם האירני — והבא שלום',
+  title:        'ישראל מנצחת !',
+  subtitle:     'שגרו אהבה לעם האירני — והביאו שלום',
   topTitle:     'ישראל מנצחת',
   yourBase:     '🏠 הבסיס שלך',
   israelSub:    '(ישראל)',
-  sendLove:     '💕 שגר אהבה!',
+  sendLove:     '💕 שגרו אהבה!',
   iranSub:      '(העם האירני)',
   howToPlay:    'איך לשחק',
   moveLine:     'גרור צד שמאל — לשלוט בגובה',
   shootLine:    'הקש בצד ימין — לשגר אהבה לעם האירני',
-  sendThese:    'שגר את אלה:',
+  sendThese:    'שגרו את אלה:',
   dodgeThese:   'התחמק מאלה:',
   goal:         'מלא את סרגל ❤️ ל-1000 והבא שלום!',
-  startBtn:     '▶ לחץ להתחיל',
+  startBtn:     'לחצו להתחיל ▶',
   upBtn:        '↑',
-  shootBtn:     '💕 שגר',
+  shootBtn:     '💕 שגרו',
   downBtn:      '↓',
   battlefield:  '✈️  שדה הקרב  ✈️',
-  loveArrow:    'שגר אהבה  →→→',
+  loveArrow:    'שגרו אהבה  →→→',
   lovePct:      p  => `💕 אהבה ${p}%`,
   shalom:       '🕊️ שלום! SHALOM! 🕊️',
   peaceBrought: t  => `הבאת שלום תוך ${t}!`,
@@ -275,7 +275,7 @@ function drawRoundRect(ctx, x, y, w, h, r, fill, stroke, strokeW) {
   if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = strokeW || 2; ctx.stroke(); }
 }
 
-function drawButton(ctx, label, x, y, w, h, hot) {
+function drawButton(ctx, label, x, y, w, h, hot, fontSize) {
   ctx.save();
   ctx.shadowColor = 'rgba(0,0,0,0.55)';
   ctx.shadowBlur  = 10;
@@ -300,7 +300,7 @@ function drawButton(ctx, label, x, y, w, h, hot) {
 
   ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
   ctx.fillStyle = hot ? '#111' : '#eee';
-  ctx.font = 'bold 20px Segoe UI, Arial';
+  ctx.font = `bold ${fontSize || 20}px Segoe UI, Arial`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.direction = 'ltr';
@@ -727,7 +727,7 @@ class Renderer {
     ctx.fillRect(rx, C.PLAY_BOT, rw, C.BOT_BAR);
     ctx.font = 'bold 15px Arial';
     ctx.fillStyle = '#ff88cc';
-    lText(ctx, isHebrew ? '💕  הקש — שגר' : '💕  TAP — SHOOT', rx + rw / 2, C.PLAY_BOT + C.BOT_BAR / 2);
+    lText(ctx, isHebrew ? '💕  הקש — שגרו' : '💕  TAP — SHOOT', rx + rw / 2, C.PLAY_BOT + C.BOT_BAR / 2);
 
     ctx.direction = 'ltr';
     ctx.font = '10px Arial';
@@ -819,7 +819,7 @@ class Renderer {
     ctx.restore();
 
     // ── Share game button ─────────────────────────────────────────────────
-    drawButton(ctx, isHebrew ? '📤 שתף את המשחק' : '📤 Share Game',
+    drawButton(ctx, isHebrew ? '📤 שתפו את המשחק' : '📤 Share Game',
       C.W / 2 - 100, 500, 200, 40, false);
 
     ctx.direction = 'ltr';
@@ -863,8 +863,8 @@ class Renderer {
     if (!drawFlagImg(ctx, IMG.iranFlag, C.W / 2 + 160, 320, flagSize))
       drawIranFlag(ctx, C.W / 2 + 160, 320, flagSize);
 
-    drawButton(ctx, isHebrew ? '📤 שתף תוצאה' : '📤 Share Result', btnShare.x, btnShare.y, btnShare.w, btnShare.h, false);
-    drawButton(ctx, isHebrew ? '🔄 משחק חדש'  : '🔄 Play Again',   btnAgain.x, btnAgain.y, btnAgain.w, btnAgain.h, false);
+    drawButton(ctx, isHebrew ? '📤 שתפו תוצאה' : '📤 Share Result', btnShare.x, btnShare.y, btnShare.w, btnShare.h, false, 28);
+    drawButton(ctx, isHebrew ? '🔄 משחק חדש'  : '🔄 Play Again',   btnAgain.x, btnAgain.y, btnAgain.w, btnAgain.h, false, 28);
   }
 }
 
