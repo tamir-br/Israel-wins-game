@@ -2,6 +2,14 @@
 <html lang="he" dir="rtl">
 <head>
 <meta charset="UTF-8">
+<!-- Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-REVS65DKDB"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-REVS65DKDB');
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -962,6 +970,7 @@ class ShareCard {
   }
 
   static shareResult(score, elapsed) {
+    gtag('event', 'share', { method: 'result', content_type: 'score_card' });
     const url = 'https://tinyurl.com/Israelwins';
     const text = isHebrew
       ? `שיחקתי ישראל מנצחת — הבאתי שלום תוך ${formatTime(elapsed)}! 🕊️\nשחקו גם אתם:`
@@ -976,6 +985,7 @@ class ShareCard {
   }
 
   static shareGame() {
+    gtag('event', 'share', { method: 'game_link', content_type: 'game' });
     const url = window.location.href;
     const text = isHebrew
       ? 'שחקו ישראל מנצחת — שגר אהבה לעם האירני!'
@@ -1124,7 +1134,7 @@ class Game {
     if (this.state === 'WIN') {
       const s = this._btnShare, a = this._btnAgain;
       if (logicalX >= s.x && logicalX <= s.x+s.w && logicalY >= s.y && logicalY <= s.y+s.h) ShareCard.shareResult(this.score, this.elapsed);
-      if (logicalX >= a.x && logicalX <= a.x+a.w && logicalY >= a.y && logicalY <= a.y+a.h) this._reset();
+      if (logicalX >= a.x && logicalX <= a.x+a.w && logicalY >= a.y && logicalY <= a.y+a.h) { gtag('event', 'play_again'); this._reset(); }
       return;
     }
     if (this.state !== 'PLAYING') return;
@@ -1163,7 +1173,7 @@ class Game {
     if (this.state === 'WIN') {
       const s = this._btnShare, a = this._btnAgain;
       if (logicalX >= s.x && logicalX <= s.x+s.w && logicalY >= s.y && logicalY <= s.y+s.h) ShareCard.shareResult(this.score, this.elapsed);
-      if (logicalX >= a.x && logicalX <= a.x+a.w && logicalY >= a.y && logicalY <= a.y+a.h) this._reset();
+      if (logicalX >= a.x && logicalX <= a.x+a.w && logicalY >= a.y && logicalY <= a.y+a.h) { gtag('event', 'play_again'); this._reset(); }
       return;
     }
     // Desktop click: right half = shoot
@@ -1171,6 +1181,7 @@ class Game {
   }
 
   _startGame() {
+    gtag('event', 'game_start');
     this._reset();
     this.state = 'PLAYING';
     this._lastTime = null;
@@ -1216,6 +1227,10 @@ class Game {
 
   _win() {
     this.state = 'WIN';
+    gtag('event', 'game_win', {
+      score: this.score,
+      elapsed_seconds: Math.round(this.elapsed)
+    });
     this.particles.spawnWinFlood(C.W, C.H);
     this.sound.win();
   }
