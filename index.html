@@ -973,7 +973,7 @@ class ShareCard {
 
   static shareResult(score, elapsed) {
     gtag('event', 'share', { method: 'result', content_type: 'score_card' });
-    const url = 'https://tinyurl.com/Israelwins';
+    const url = 'https://tinyurl.com/IsraelWinsGame';
     const text = isHebrew
       ? `שיחקתי ישראל מנצחת — הבאתי שלום תוך ${formatTime(elapsed)}! 🕊️\nשחקו גם אתם:`
       : `I played Israel Wins — brought PEACE in ${formatTime(elapsed)}! 🕊️\nPlay too:`;
@@ -988,14 +988,14 @@ class ShareCard {
 
   static shareGame() {
     gtag('event', 'share', { method: 'game_link', content_type: 'game' });
-    const url = window.location.href;
+    const url = 'https://tinyurl.com/IsraelWinsGame';
     const text = isHebrew
-      ? 'שחקו ישראל מנצחת — שגר אהבה לעם האירני!'
-      : 'Play Israel Wins — Send love to the Iranian people!';
+      ? 'שחקו ישראל מנצחת - שגרו אהבה והביאו לשלום'
+      : 'Play Israel Wins — Send love and bring peace!';
     if (navigator.share) {
       navigator.share({ title: L.shareTitle, text, url }).catch(() => {});
     } else {
-      navigator.clipboard && navigator.clipboard.writeText(url).catch(() => {});
+      navigator.clipboard && navigator.clipboard.writeText(text + '\n' + url).catch(() => {});
     }
   }
 
