@@ -470,7 +470,7 @@ class Player {
     if (input.up)   this.y -= this.speed * dt / 16;
     if (input.down) this.y += this.speed * dt / 16;
     this.x = C.ISRAEL_ZONE_X + C.ISRAEL_ZONE_W / 2;
-    this.y = clamp(this.y, C.PLAY_TOP + this.h/2, C.PLAY_BOT - this.h/2);
+    this.y = clamp(this.y, C.PLAY_TOP + 10 + this.h/2, C.PLAY_BOT - 10 - this.h/2);
     if (this.shootCooldown > 0) this.shootCooldown -= dt;
     if (this.hurtFlash > 0)    this.hurtFlash -= dt;
   }
@@ -1144,7 +1144,7 @@ class Game {
     if (screenX < this.canvas.width / 2) {
       // Left half — drag to control height
       this._leftTouchId = id;
-      this.player.y = clamp(logicalY, C.PLAY_TOP + this.player.h / 2, C.PLAY_BOT - this.player.h / 2);
+      this.player.y = clamp(logicalY, C.PLAY_TOP + 10 + this.player.h / 2, C.PLAY_BOT - 10 - this.player.h / 2);
     } else {
       // Right half — shoot
       this._playerShoot();
@@ -1154,7 +1154,7 @@ class Game {
   onTouchMove(id, logicalX, logicalY) {
     if (this.state !== 'PLAYING') return;
     if (id === this._leftTouchId) {
-      this.player.y = clamp(logicalY, C.PLAY_TOP + this.player.h / 2, C.PLAY_BOT - this.player.h / 2);
+      this.player.y = clamp(logicalY, C.PLAY_TOP + 10 + this.player.h / 2, C.PLAY_BOT - 10 - this.player.h / 2);
     }
   }
 
@@ -1267,8 +1267,9 @@ class Game {
 
     const enemySpd = 1.8 * this.iranSpeedMult;
     this.iranEnemy.y += this.iranEnemy.vy * enemySpd * dt / 16;
-    if (this.iranEnemy.y < C.PLAY_TOP + 50) { this.iranEnemy.y = C.PLAY_TOP + 50; this.iranEnemy.vy =  1; }
-    if (this.iranEnemy.y > C.PLAY_BOT - 50) { this.iranEnemy.y = C.PLAY_BOT - 50; this.iranEnemy.vy = -1; }
+    const enemyHalf = 56;
+    if (this.iranEnemy.y < C.PLAY_TOP + 10 + enemyHalf) { this.iranEnemy.y = C.PLAY_TOP + 10 + enemyHalf; this.iranEnemy.vy =  1; }
+    if (this.iranEnemy.y > C.PLAY_BOT - 10 - enemyHalf) { this.iranEnemy.y = C.PLAY_BOT - 10 - enemyHalf; this.iranEnemy.vy = -1; }
 
     for (const p of this.israelProjs) p.update(dt);
     for (const p of this.iranProjs)   p.update(dt);
