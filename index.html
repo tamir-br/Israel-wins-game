@@ -457,7 +457,7 @@ class IranProjectile extends Projectile {
 class Player {
   constructor() { this.reset(); }
   reset() {
-    this.x = 110;
+    this.x = C.ISRAEL_ZONE_W / 2;
     this.y = C.H / 2;
     this.w = C.PLAYER_W;
     this.h = C.PLAYER_H;
@@ -469,7 +469,7 @@ class Player {
   update(dt, input) {
     if (input.up)   this.y -= this.speed * dt / 16;
     if (input.down) this.y += this.speed * dt / 16;
-    this.x = 110;
+    this.x = C.ISRAEL_ZONE_W / 2;
     this.y = clamp(this.y, C.PLAY_TOP + this.h/2, C.PLAY_BOT - this.h/2);
     if (this.shootCooldown > 0) this.shootCooldown -= dt;
     if (this.hurtFlash > 0)    this.hurtFlash -= dt;
@@ -570,13 +570,6 @@ class Renderer {
     lText(ctx, L.yourBase, C.ISRAEL_ZONE_W / 2, C.PLAY_TOP + 58);
     ctx.restore();
 
-    const flagCX = C.ISRAEL_ZONE_W / 2;
-    const flagCY = (C.PLAY_TOP + C.PLAY_BOT) / 2;
-    ctx.save();
-    ctx.globalAlpha = 0.25;
-    if (!drawFlagImg(ctx, IMG.israel, flagCX, flagCY, 100))
-      drawIsraelFlag(ctx, flagCX, flagCY, 100);
-    ctx.restore();
   }
 
   drawIranZone(ctx, lovePercent, enemyY, score) {
