@@ -126,7 +126,7 @@ const L = isHebrew ? {
   scoreLine:    s  => `ניקוד: ${s.toLocaleString()} נק׳`,
   alwaysWins:   'ישראל מנצחת תמיד!',
   shareTitle:   '🦁 ישראל מנצחת - שאגת הארי',
-  sharePeace:   t  => `הבאתי שלום תוך ${t}!`,
+  sharePeace:   t  => `\u200Fהבאתי שלום תוך ${t}!\u200F`,
   shareScore:   s  => `ניקוד: ${s.toLocaleString()} נק׳`,
 } : {
   title:        'Israel Wins!',
@@ -915,42 +915,34 @@ class ShareCard {
 
     drawRoundRect(ctx, 10, 10, w - 20, h - 20, 16, null, '#ffd700', 3);
 
-    ctx.direction = 'ltr';
+    ctx.direction = isHebrew ? 'rtl' : 'ltr';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
     ctx.font = 'bold 30px Arial';
     ctx.fillStyle = '#ffd700';
     ctx.shadowBlur = 16; ctx.shadowColor = '#ffd700';
-    ctx.fillText(L.shareTitle, w / 2, 70);
+    ctx.fillText(L.shareTitle, w / 2, 80);
     ctx.shadowBlur = 0;
 
     ctx.strokeStyle = '#ffd700';
     ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(40, 100); ctx.lineTo(w - 40, 100); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(40, 115); ctx.lineTo(w - 40, 115); ctx.stroke();
 
-    if (!drawFlagImg(ctx, IMG.israel, w / 2 - 150, 165, 26))
-      drawIsraelFlag(ctx, w / 2 - 150, 165, 26);
+    if (!drawFlagImg(ctx, IMG.israel, w / 2 - 150, 185, 26))
+      drawIsraelFlag(ctx, w / 2 - 150, 185, 26);
     ctx.font = 'bold 24px Arial';
     ctx.fillStyle = '#aaffcc';
-    ctx.fillText(L.sharePeace(formatTime(elapsed)), w / 2 + 10, 165);
-
-    ctx.font = 'bold 22px Arial';
-    ctx.fillStyle = '#ffffaa';
-    ctx.fillText(L.shareScore(score), w / 2, 220);
+    ctx.fillText(L.sharePeace(formatTime(elapsed)), w / 2 + 10, 185);
 
     ctx.font = 'bold 28px Arial';
     ctx.fillStyle = '#ffffff';
     ctx.shadowBlur = 12; ctx.shadowColor = '#fff';
-    ctx.fillText('🕊️  SHALOM ACHIEVED  🕊️', w / 2, 285);
+    ctx.fillText('🕊️  SHALOM ACHIEVED  🕊️', w / 2, 270);
     ctx.shadowBlur = 0;
 
     ctx.strokeStyle = '#ffd700';
-    ctx.beginPath(); ctx.moveTo(40, 315); ctx.lineTo(w - 40, 315); ctx.stroke();
-
-    ctx.font = '15px Arial';
-    ctx.fillStyle = '#88aacc';
-    ctx.fillText('© tamir.devlab@gmail.com  2016', w / 2, 370);
+    ctx.beginPath(); ctx.moveTo(40, 310); ctx.lineTo(w - 40, 310); ctx.stroke();
 
     return oc;
   }
