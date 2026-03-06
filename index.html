@@ -955,34 +955,38 @@ class ShareCard {
       : `I played Israel Wins — brought PEACE in ${formatTime(elapsed)}! 🕊️\nPlay too:`;
     const textWithUrl = text + '\n' + url;
     const card = ShareCard.generate(score, elapsed);
-    card.toBlob(blob => {
-      const file = new File([blob], 'israel-wins.png', { type: 'image/png' });
-      // 1. Try share with image + text (URL embedded in text; don't pass url param with files — breaks WhatsApp/Android)
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        navigator.share({ title: L.shareTitle, text: textWithUrl, files: [file] })
-          .catch(() => {
-            // File share failed — fall back to text+URL share
-            if (navigator.share) {
-              navigator.share({ title: L.shareTitle, text, url }).catch(() => {});
-            }
-            ShareCard._download(card);
-          });
-        return;
-      }
-      // 2. Try share with text + URL only (no file support)
-      if (navigator.share) {
-        navigator.share({ title: L.shareTitle, text, url }).catch(() => {
-          navigator.clipboard && navigator.clipboard.writeText(textWithUrl).catch(() => {});
+    // Convert synchronously to keep iOS user-gesture context alive
+    const dataUrl = card.toDataURL('image/png');
+    const bin = atob(dataUrl.split(',')[1]);
+    const buf = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
+    const blob = new Blob([buf], { type: 'image/png' });
+    const file = new File([blob], 'israel-wins.png', { type: 'image/png' });
+    // 1. Try share with image + text (URL embedded in text; don't pass url param with files — breaks WhatsApp/Android)
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      navigator.share({ title: L.shareTitle, text: textWithUrl, files: [file] })
+        .catch(() => {
+          // File share failed — fall back to text+URL share
+          if (navigator.share) {
+            navigator.share({ title: L.shareTitle, text, url }).catch(() => {});
+          }
+          ShareCard._download(card);
         });
-        ShareCard._download(card);
-        return;
-      }
-      // 3. Clipboard copy + download
-      if (navigator.clipboard) {
-        navigator.clipboard.writeText(textWithUrl).catch(() => {});
-      }
+      return;
+    }
+    // 2. Try share with text + URL only (no file support)
+    if (navigator.share) {
+      navigator.share({ title: L.shareTitle, text, url }).catch(() => {
+        navigator.clipboard && navigator.clipboard.writeText(textWithUrl).catch(() => {});
+      });
       ShareCard._download(card);
-    });
+      return;
+    }
+    // 3. Clipboard copy + download
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(textWithUrl).catch(() => {});
+    }
+    ShareCard._download(card);
   }
 
   static shareGame() {
