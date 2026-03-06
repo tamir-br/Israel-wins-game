@@ -956,41 +956,41 @@ class ShareCard {
   }
 
   static share(score, elapsed) {
+    gtag('event', 'share', { method: 'result', content_type: 'score_card', score: score, time: formatTime(elapsed) });
+    const url = 'https://tinyurl.com/IsraelWinsGame';
+    const text = isHebrew
+      ? `שיחקתי "ישראל מנצחת" — הבאתי שלום תוך ${formatTime(elapsed)}! 🕊️\nשחקו גם אתם:`
+      : `I played Israel Wins — brought PEACE in ${formatTime(elapsed)}! 🕊️\nPlay too:`;
     const card = ShareCard.generate(score, elapsed);
     card.toBlob(blob => {
       const file = new File([blob], 'israel-wins.png', { type: 'image/png' });
+      // 1. Try share with image + text + URL
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        navigator.share({
-          title: L.shareTitle,
-          text: L.sharePeace(formatTime(elapsed)) + ' ' + L.shareScore(score),
-          files: [file],
-        }).catch(() => ShareCard._download(card));
-      } else {
-        ShareCard._download(card);
+        navigator.share({ title: L.shareTitle, text, url, files: [file] })
+          .catch(() => ShareCard._download(card));
+        return;
       }
+      // 2. Try share with text + URL only (no file support)
+      if (navigator.share) {
+        navigator.share({ title: L.shareTitle, text, url }).catch(() => {
+          navigator.clipboard && navigator.clipboard.writeText(text + '\n' + url).catch(() => {});
+        });
+        ShareCard._download(card);
+        return;
+      }
+      // 3. Clipboard copy + download
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(text + '\n' + url).catch(() => {});
+      }
+      ShareCard._download(card);
     });
-  }
-
-  static shareResult(score, elapsed) {
-    gtag('event', 'share', { method: 'result', content_type: 'score_card' });
-    const url = 'https://tinyurl.com/IsraelWinsGame';
-    const text = isHebrew
-      ? `שיחקתי ישראל מנצחת — הבאתי שלום תוך ${formatTime(elapsed)}! 🕊️\nשחקו גם אתם:`
-      : `I played Israel Wins — brought PEACE in ${formatTime(elapsed)}! 🕊️\nPlay too:`;
-    if (navigator.share) {
-      navigator.share({ title: L.shareTitle, text, url }).catch(() => {
-        navigator.clipboard && navigator.clipboard.writeText(text + '\n' + url).catch(() => {});
-      });
-    } else {
-      navigator.clipboard && navigator.clipboard.writeText(text + '\n' + url).catch(() => {});
-    }
   }
 
   static shareGame() {
     gtag('event', 'share', { method: 'game_link', content_type: 'game' });
     const url = 'https://tinyurl.com/IsraelWinsGame';
     const text = isHebrew
-      ? 'שחקו ישראל מנצחת - שגרו אהבה והביאו לשלום'
+      ? 'שחקו "ישראל מנצחת" - שגרו אהבה והביאו לשלום'
       : 'Play Israel Wins — Send love and bring peace!';
     if (navigator.share) {
       navigator.share({ title: L.shareTitle, text, url }).catch(() => {});
@@ -1135,7 +1135,7 @@ class Game {
     }
     if (this.state === 'WIN') {
       const s = this._btnShare, a = this._btnAgain;
-      if (logicalX >= s.x && logicalX <= s.x+s.w && logicalY >= s.y && logicalY <= s.y+s.h) ShareCard.shareResult(this.score, this.elapsed);
+      if (logicalX >= s.x && logicalX <= s.x+s.w && logicalY >= s.y && logicalY <= s.y+s.h) ShareCard.share(this.score, this.elapsed);
       if (logicalX >= a.x && logicalX <= a.x+a.w && logicalY >= a.y && logicalY <= a.y+a.h) { gtag('event', 'play_again'); this._reset(); }
       return;
     }
@@ -1174,7 +1174,7 @@ class Game {
     }
     if (this.state === 'WIN') {
       const s = this._btnShare, a = this._btnAgain;
-      if (logicalX >= s.x && logicalX <= s.x+s.w && logicalY >= s.y && logicalY <= s.y+s.h) ShareCard.shareResult(this.score, this.elapsed);
+      if (logicalX >= s.x && logicalX <= s.x+s.w && logicalY >= s.y && logicalY <= s.y+s.h) ShareCard.share(this.score, this.elapsed);
       if (logicalX >= a.x && logicalX <= a.x+a.w && logicalY >= a.y && logicalY <= a.y+a.h) { gtag('event', 'play_again'); this._reset(); }
       return;
     }
